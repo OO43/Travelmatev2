@@ -1,5 +1,6 @@
 /** Global spacing scale used for padding, margins and gaps. */
 export const SPACING = {
+  xxs: 2,
   xs: 4,
   sm: 8,
   md: 16,

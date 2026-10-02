@@ -8,8 +8,8 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { TextField } from '@/components/TextField';
 import { COLORS, SPACING } from '@/theme';
 
-export function LoginView({ email, password, isLoading, error, onEmailChange, onPasswordChange, onSubmit, onBack }: {
-  email: string; password: string; isLoading: boolean; error: string; onEmailChange: (value: string) => void; onPasswordChange: (value: string) => void; onSubmit: () => void; onBack: () => void;
+export function LoginView({ email, password, isLoading, error, onEmailChange, onPasswordChange, onSubmit, onBack, onSignUp }: {
+  email: string; password: string; isLoading: boolean; error: string; onEmailChange: (value: string) => void; onPasswordChange: (value: string) => void; onSubmit: () => void; onBack: () => void; onSignUp: () => void;
 }) {
   return (
     <ScreenContainer header={<AppHeader title="Welcome back" subtitle="Log in to continue" onBack={onBack} />}>
@@ -17,6 +17,7 @@ export function LoginView({ email, password, isLoading, error, onEmailChange, on
       <View style={styles.form}><TextField label="Email address" value={email} onChangeText={onEmailChange} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder="name@example.com" /><TextField label="Password" value={password} onChangeText={onPasswordChange} secureTextEntry autoComplete="password" placeholder="Enter password" /></View>
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <PrimaryButton label="Log in" icon="log-in" loading={isLoading} onPress={onSubmit} />
+      <PrimaryButton label="Sign up" icon="person-add" variant="secondary" onPress={onSignUp} />
       <Card style={styles.demoCard}><Text style={styles.demoTitle}>Demo account</Text><Text style={styles.demoText}>Email: oore@travelmate.com</Text><Text style={styles.demoText}>Password: password123</Text></Card>
     </ScreenContainer>
   );
