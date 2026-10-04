@@ -12,7 +12,7 @@ export default function ProtectedLayout() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="journey-planner" />
       <Stack.Screen name="journey-status" />
-      <Stack.Screen name="ticket-scanner" />
+      <Stack.Screen name="ticket-scanner" options={{ presentation: 'modal' }}/>
       <Stack.Screen name="feedback" options={{ presentation: 'modal' }} />
     </Stack>
   );

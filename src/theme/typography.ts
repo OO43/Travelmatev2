@@ -6,7 +6,7 @@
  */
 export const TYPOGRAPHY = {
   display: {
-    fontSize: 34,
+    fontSize: 15,
     lineHeight: 41,
     fontWeight: '900',
     letterSpacing: -0.9,

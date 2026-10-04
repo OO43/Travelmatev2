@@ -11,5 +11,17 @@ export default function LoginCoordinator() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.replace('/dashboard');
   }
-  return <LoginView {...viewModel} onEmailChange={viewModel.setEmail} onPasswordChange={viewModel.setPassword} onSubmit={() => void submit()} onBack={() => router.back()} />;
-}
+  
+  return (
+  <LoginView
+    {...viewModel}
+    onEmailChange={viewModel.setEmail}
+    onPasswordChange={viewModel.setPassword}
+    onSubmit={() => void submit()}
+    onBack={() => router.back()}
+    onSignUp={() => {
+      console.log('Opening sign-up');
+      router.push('/sign-up');
+    }}
+  />
+)};
