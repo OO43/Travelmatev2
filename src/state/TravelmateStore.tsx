@@ -11,6 +11,8 @@ const STORAGE_KEY = 'travelmate.mvp.state.v1';
 const defaultProfile: PassengerProfile = {
   passengerId: 'passenger-001',
   preferredName: 'Oore',
+  phoneNumber: '+44 1234 567890',
+  emailAddress: 'oore@example.com',
   preferredLanguage: 'English (UK)',
   homeLocation: 'Leicester',
   communicationMethod: 'combined',

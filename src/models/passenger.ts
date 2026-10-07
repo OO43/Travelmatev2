@@ -22,6 +22,8 @@ export type AssistancePreferences = {
 export type PassengerProfile = {
   passengerId: string;
   preferredName: string;
+  phoneNumber: string;
+  emailAddress: string;
   preferredLanguage: string;
   homeLocation: string;
   communicationMethod: CommunicationMethod;
