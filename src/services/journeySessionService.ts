@@ -54,3 +54,21 @@ export async function createJourneySession(
 
   return body as JourneySession;
 }
+
+export async function getJourneySession(
+  sessionId: string,
+): Promise<JourneySession> {
+  const response = await fetch(
+    `${API_URL}/api/v1/journey-sessions/${encodeURIComponent(sessionId)}`,
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+
+    throw new Error(
+      `Unable to load journey session (${response.status}): ${errorBody}`,
+    );
+  }
+
+  return response.json() as Promise<JourneySession>;
+}

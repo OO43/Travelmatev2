@@ -4,7 +4,7 @@
     "slug": "travelmate-main-2-0",
     "version": "2.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/TravelmateIcon.png",
     "userInterfaceStyle": "light",
     "scheme": "travelmate",
     "plugins": [
@@ -23,15 +23,15 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/TravelmateIcon.png",
+        "backgroundImage": "./assets/TravelmateIcon.png",
+        "monochromeImage": "./assets/TravelmateIcon.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.greene4ev.travelmate"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/TravelmateIcon.png"
     }
   }
 }
