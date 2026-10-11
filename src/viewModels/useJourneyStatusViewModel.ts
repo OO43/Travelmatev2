@@ -3,44 +3,48 @@ import { useEffect, useState } from 'react';
 import type { JourneySession } from '@/models/journeySession';
 import { getJourneySession } from '@/services/journeySessionService';
 
+type SessionResult = {
+  sessionId: string;
+  attempt: number;
+  session: JourneySession | null;
+  errorMessage: string | null;
+};
+
 export function useJourneyStatusViewModel(sessionId?: string) {
-  const [journeySession, setJourneySession] =
-    useState<JourneySession | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(sessionId));
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [refreshCount, setRefreshCount] = useState(0);
+  const [result, setResult] = useState<SessionResult | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
-
-    setJourneySession(null);
-    setErrorMessage(null);
-
     if (!sessionId) {
-      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
+    let cancelled = false;
+    const requestedSessionId = sessionId;
 
     async function loadSession() {
       try {
-        const session = await getJourneySession(sessionId!);
+        const session = await getJourneySession(requestedSessionId);
 
         if (!cancelled) {
-          setJourneySession(session);
+          setResult({
+            sessionId: requestedSessionId,
+            attempt,
+            session,
+            errorMessage: null,
+          });
         }
       } catch (error) {
         if (!cancelled) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'Unable to load your journey session.',
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
+          setResult({
+            sessionId: requestedSessionId,
+            attempt,
+            session: null,
+            errorMessage:
+              error instanceof Error
+                ? error.message
+                : 'Unable to load your journey session.',
+          });
         }
       }
     }
@@ -50,11 +54,23 @@ export function useJourneyStatusViewModel(sessionId?: string) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, refreshCount]);
+  }, [sessionId, attempt]);
+
+  const currentResult =
+    sessionId &&
+    result?.sessionId === sessionId &&
+    result.attempt === attempt
+      ? result
+      : null;
 
   function retry() {
-    setRefreshCount((count) => count + 1);
+    setAttempt((value) => value + 1);
   }
 
-  return { journeySession, isLoading, errorMessage, retry };
+  return {
+    journeySession: currentResult?.session ?? null,
+    isLoading: Boolean(sessionId) && currentResult === null,
+    errorMessage: currentResult?.errorMessage ?? null,
+    retry,
+  };
 }

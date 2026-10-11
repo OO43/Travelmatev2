@@ -247,3 +247,140 @@ export function JourneyStatusView({
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  hero: {
+    backgroundColor: COLORS.forestDeep,
+    borderColor: COLORS.forestDeep,
+    gap: SPACING.md,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  icon: {
+    width: 50,
+    height: 50,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  provider: {
+    color: '#A8D8CD',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  service: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  status: {
+    color: '#FFD09F',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  route: {
+    color: COLORS.white,
+    fontSize: 19,
+    lineHeight: 26,
+    fontWeight: '900',
+  },
+  times: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  time: {
+    color: COLORS.white,
+    fontSize: 21,
+    fontWeight: '900',
+  },
+  timeLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#5D8078',
+  },
+  meta: { color: '#C9DDD8', fontSize: 13 },
+  guidance: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: SPACING.md,
+    backgroundColor: COLORS.lilacSoft,
+    borderRadius: RADIUS.md,
+  },
+  guidanceTitle: {
+    color: COLORS.lilac,
+    fontWeight: '900',
+    fontSize: 13,
+  },
+  guidanceBody: {
+    color: COLORS.inkSoft,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  section: { gap: 0 },
+  eyebrow: {
+    color: COLORS.forest,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+    marginBottom: SPACING.md,
+  },
+  timelineRow: { flexDirection: 'row', minHeight: 80 },
+  timelineMarker: { width: 32, alignItems: 'center' },
+  dot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    borderWidth: 2,
+    borderColor: COLORS.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dotDone: {
+    backgroundColor: COLORS.success,
+    borderColor: COLORS.success,
+  },
+  dotCurrent: { borderColor: COLORS.coral, borderWidth: 5 },
+  verticalLine: {
+    flex: 1,
+    width: 2,
+    backgroundColor: COLORS.line,
+  },
+  timelineCopy: { flex: 1, paddingBottom: SPACING.lg },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  timelineTitle: {
+    color: COLORS.ink,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  currentTitle: { color: COLORS.coral },
+  timelineTime: { color: COLORS.inkSoft, fontSize: 13 },
+  timelineDetail: {
+    color: COLORS.inkSoft,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  emptyTitle: {
+    color: COLORS.ink,
+    fontWeight: '900',
+    fontSize: 18,
+  },
+  emptyBody: {
+    color: COLORS.inkSoft,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+});

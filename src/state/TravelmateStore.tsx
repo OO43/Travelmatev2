@@ -14,7 +14,7 @@ const defaultProfile: PassengerProfile = {
   phoneNumber: '+44 1234 567890',
   emailAddress: 'oore@example.com',
   preferredLanguage: 'English (UK)',
-  homeLocation: 'Leicester',
+  homeLocation: 'London',
   communicationMethod: 'combined',
   accessibilityNeeds: {
     visualImpairment: false,
