@@ -11,6 +11,11 @@ export type AccessibilityNeeds = {
 };
 
 export type AssistancePreferences = {
+  largeText?: boolean;
+  highContrast?: boolean;
+  stepFreeRoutes?: boolean;
+  extraTransferTime?: boolean;
+  prioritySeating?: boolean;
   audioGuidance: boolean;
   vibrationGuidance: boolean;
   boardingAssistance: boolean;
@@ -20,6 +25,12 @@ export type AssistancePreferences = {
 };
 
 export type PassengerProfile = {
+  firstName?: string;
+  lastName?: string;
+  emergencyContact?: string;
+  sharingPreference?: 'needed' | 'always' | 'never';
+  personalisedSuggestions?: boolean;
+  enhancedSupervision?: boolean;
   passengerId: string;
   preferredName: string;
   phoneNumber: string;

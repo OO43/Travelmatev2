@@ -1,50 +1,134 @@
+import { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-import { AppHeader } from '@/components/AppHeader';
-import { Card } from '@/components/Card';
-import { PrimaryButton } from '@/components/PrimaryButton';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { TextField } from '@/components/TextField';
-import { COLORS, RADIUS, SPACING } from '@/theme';
-import { TRANSPORT_LABELS, type Journey, type TransportMode } from '@/models/journey';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
+import { Card, PrimaryButton, ScreenContainer } from '@/components/ui';
+import { SelectField } from '@/components/SelectField';
+import { COLORS, RADIUS } from '@/theme';
+import type { Journey, TransportMode } from '@/models/journey';
 import type { TicketIntelligenceResult } from '@/models/ticket';
 
-export function JourneyPlannerView({ mode, origin, destination, isPlanning, error, result, ticket, onOriginChange, onDestinationChange, onFind, onContinue, onBack }: {
-  mode: TransportMode; origin: string; destination: string; isPlanning: boolean; error: string; result: Journey | null; ticket: TicketIntelligenceResult | null;
-  onOriginChange: (value: string) => void; onDestinationChange: (value: string) => void; onFind: () => void; onContinue: () => void; onBack: () => void;
+function dateChoices(start: string) {
+  const date = new Date(start + 'T12:00:00');
+  return Array.from({ length: 90 }, (_, index) => {
+    const day = new Date(date); day.setDate(day.getDate() + index);
+    const value = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
+    return { value, label: String(day.getDate()).padStart(2, '0') + '/' + String(day.getMonth() + 1).padStart(2, '0') + '/' + day.getFullYear() };
+  });
+}
+const timeChoices = Array.from({ length: 96 }, (_, index) => {
+  const value = String(Math.floor(index / 4)).padStart(2, '0') + ':' + String((index % 4) * 15).padStart(2, '0');
+  return { value, label: value };
+});
+
+export function JourneyPlannerView({ mode, origin, destination, departureDate, departureTime, useAccessibilityPreferences,
+  isPlanning, isConfirming, error, result, routes, ticket, onOriginChange, onDestinationChange,
+  onDateChange, onTimeChange, onPreferencesChange, onSelectRoute, onModeChange, onFind, onContinue, onBack }: {
+  mode: TransportMode; origin: string; destination: string; departureDate: string; departureTime: string;
+  useAccessibilityPreferences: boolean; isPlanning: boolean; isConfirming: boolean; error: string;
+  result: Journey | null; routes: Journey[]; ticket: TicketIntelligenceResult | null;
+  onOriginChange: (value: string) => void; onDestinationChange: (value: string) => void;
+  onDateChange: (value: string) => void; onTimeChange: (value: string) => void; onPreferencesChange: (value: boolean) => void;
+  onSelectRoute: (journey: Journey) => void; onFind: () => void; onContinue: () => void; onBack: () => void;
+  onModeChange: (mode: TransportMode) => void;
 }) {
-  const icon = mode === 'flight' ? 'airplane' : mode === 'train' ? 'train' : 'bus';
-  return (
-    <ScreenContainer header={<AppHeader title={`${TRANSPORT_LABELS[mode]} journey`} subtitle="Accessible planning and live support" onBack={onBack} />}>
-      <Card style={styles.modeCard}><View style={styles.modeIcon}><Ionicons name={icon} size={29} color={COLORS.forest} /></View><View style={styles.flex}><Text style={styles.modeTitle}>{TRANSPORT_LABELS[mode]} planner</Text><Text style={styles.modeBody}>Journey planning and status use one shared TravelMate flow.</Text></View></Card>
-      {ticket ? <View style={styles.ticket}><Ionicons name="ticket" size={19} color={COLORS.forest} /><Text style={styles.ticketText}>Pre-filled from {ticket.source === 'barcode' ? 'barcode' : 'document scan'} · Review before continuing</Text></View> : null}
-      <View style={styles.form}>
-        <TextField label="From" value={origin} onChangeText={onOriginChange} placeholder="Starting point" />
-        <View style={styles.connector}><View style={styles.dot} /><View style={styles.line} /><View style={[styles.dot, styles.endDot]} /></View>
-        <TextField label="To" value={destination} onChangeText={onDestinationChange} placeholder="Destination" />
-      </View>
-      <Card style={styles.support}><Ionicons name="accessibility" size={22} color={COLORS.forest} /><View style={styles.flex}><Text style={styles.supportTitle}>Accessibility preferences applied</Text><Text style={styles.supportBody}>Step-free routes · Haptic reminders · Extra boarding time</Text></View></Card>
-      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-      <PrimaryButton label={result ? 'Refresh journey' : `Find ${TRANSPORT_LABELS[mode].toLowerCase()} journey`} icon="search" loading={isPlanning} onPress={onFind} />
-      {result ? (
-        <Card style={styles.result}>
-          <View style={styles.resultTop}><Text style={styles.best}>BEST ACCESSIBLE MATCH</Text><Text style={styles.provider}>{result.provider}</Text></View>
-          <Text style={styles.times}>{result.departureTime} → {result.arrivalTime}</Text>
-          <Text style={styles.route}>{result.origin} → {result.destination}</Text>
-          <View style={styles.tags}>{result.accessibilityFeatures.map((feature) => <Text key={feature} style={styles.tag}>{feature}</Text>)}</View>
-          <Pressable accessibilityRole="button" onPress={onContinue} style={styles.continue}><Text style={styles.continueText}>Open journey status</Text><Ionicons name="arrow-forward" size={18} color={COLORS.white} /></Pressable>
+  const [dates] = useState(() => dateChoices(departureDate));
+  const icon = mode === 'flight' ? 'airplane-outline' : mode === 'train' ? 'train-outline' : mode === 'car' ? 'car-outline' : 'bus-outline';
+  return <ScreenContainer backgroundColor={COLORS.cream}>
+    <View style={styles.headingRow}>
+      <View style={styles.flex}><Text style={styles.kicker}>NEW JOURNEY</Text>
+        <Text accessibilityRole="header" style={styles.heading}>Where are you going?</Text></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Close journey planner" onPress={onBack} style={styles.close}>
+        <Ionicons name="close" size={25} color="#173653" />
+      </Pressable>
+    </View>
+    {ticket ? <Text style={styles.note}>Pre-filled from your ticket. Review before confirming.</Text> : null}
+    <SelectField label="Transport" value={mode} disabled={isConfirming} bottomSheet
+      options={[{ label: 'Bus', value: 'bus' }, { label: 'Train', value: 'train' }, { label: 'Flight', value: 'flight' }]}
+      onChange={value => onModeChange(value as TransportMode)} />
+    <View style={styles.locations}>
+      <LocationField label="From" value={origin} onChange={onOriginChange} disabled={isConfirming} />
+      <LocationField label="To" value={destination} onChange={onDestinationChange} disabled={isConfirming} />
+    </View>
+    <SelectField label="Date" icon="calendar-outline" value={departureDate} options={dates} onChange={onDateChange} disabled={isConfirming} />
+    <SelectField label="Leave at" icon="time-outline" value={departureTime} options={timeChoices} onChange={onTimeChange} disabled={isConfirming} />
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: useAccessibilityPreferences, disabled: isConfirming }}
+      disabled={isConfirming} onPress={() => onPreferencesChange(!useAccessibilityPreferences)} style={styles.preferences}>
+      <Ionicons name={useAccessibilityPreferences ? 'checkbox' : 'square-outline'} size={25} color="#144F85" />
+      <View style={styles.flex}><Text style={styles.preferenceTitle}>Use my accessibility preferences</Text>
+        <Text style={styles.preferenceBody}>Prioritise step-free routes and allow extra transfer time</Text></View>
+    </Pressable>
+    {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+    <PrimaryButton label={routes.length ? 'Refresh routes' : 'Find routes'} icon="search" loading={isPlanning}
+      disabled={isConfirming} onPress={onFind} />
+    {routes.length ? <>
+      <Text style={styles.kicker}>{routes.length} ROUTES FOUND</Text>
+      <View style={styles.resultsHeading}><Text style={styles.resultHeading}>Recommended for you</Text><Text style={styles.note}>Preview results</Text></View>
+      <Text style={styles.note}>Sample routes, times and fares for testing.</Text>
+      {routes.map(route => <Pressable key={route.id} accessibilityRole="radio"
+        accessibilityLabel={route.serviceNumber + ', ' + route.departureTime + ' to ' + route.arrivalTime + ', ' + route.price}
+        accessibilityState={{ selected: result?.id === route.id, disabled: isConfirming }} disabled={isConfirming}
+        onPress={() => onSelectRoute(route)} style={styles.routeWrap}>
+        <Card style={[styles.routeCard, route.recommended ? styles.recommended : {}, result?.id === route.id ? styles.selected : {}]}>
+          {route.recommended ? <View style={styles.best}><Ionicons name="sparkles-outline" size={16} color="#144F85" /><Text style={styles.bestText}>Best match</Text></View> : null}
+          <View style={styles.times}><Text style={styles.time}>{route.departureTime}</Text><View style={styles.timeLine} /><Text style={styles.time}>{route.arrivalTime}</Text></View>
+          {route.departureDate !== departureDate ? <Text style={styles.note}>Departs {route.departureDate?.split('-').reverse().join('/')}</Text> : null}
+          {route.arrivalDate !== route.departureDate ? <Text style={styles.note}>Arrives the following day</Text> : null}
+          <View style={styles.routeMain}>
+            <View style={styles.mode}><Ionicons name={icon} size={20} color="#144F85" /><Text style={styles.service}>{route.serviceNumber}</Text></View>
+            <View style={styles.routeCopy}><Text style={styles.duration}>{route.durationMinutes} min · {route.changes ? route.changes + ' change' : 'Direct'}</Text>
+              <Text style={styles.routeText}>{route.origin} → {route.destination}</Text></View>
+            <Text style={styles.price}>{route.price}</Text>
+          </View>
+          <View style={styles.tags}>{route.accessibilityFeatures.map(feature => <Text key={feature} style={styles.tag}>{feature}</Text>)}</View>
+          {result?.id === route.id ? <Text style={styles.selectedLabel}>Selected route</Text> : null}
         </Card>
-      ) : null}
-    </ScreenContainer>
-  );
+      </Pressable>)}
+      <PrimaryButton label={result ? 'Confirm journey' : 'Select a route above'} loading={isConfirming} disabled={!result} onPress={onContinue} />
+    </> : null}
+  </ScreenContainer>;
 }
 
+function LocationField({ label, value, onChange, disabled }: { label: string; value: string; onChange: (value: string) => void; disabled: boolean }) {
+  const [focused, setFocused] = useState(false);
+  return <View><Text style={styles.fieldLabel}>{label}</Text>
+    <View style={[styles.inputRow, focused && styles.focused]}>
+      <Ionicons name="location-outline" size={23} color="#536B83" />
+      <TextInput accessibilityLabel={label} value={value} onChangeText={onChange} editable={!disabled}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder={label === 'From' ? 'Starting point' : 'Destination'}
+        placeholderTextColor="#687E92" style={styles.input} />
+    </View>
+  </View>;
+}
 const styles = StyleSheet.create({
-  flex: { flex: 1 }, modeCard: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: COLORS.forestSoft, borderColor: '#BCE2D5' },
-  modeIcon: { width: 54, height: 54, borderRadius: 18, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' }, modeTitle: { color: COLORS.ink, fontWeight: '900', fontSize: 18 }, modeBody: { color: COLORS.inkSoft, fontSize: 12, lineHeight: 17, marginTop: 3 },
-  ticket: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: 12, borderRadius: RADIUS.sm, backgroundColor: COLORS.amberSoft }, ticketText: { flex: 1, color: COLORS.amber, fontSize: 12, fontWeight: '700' },
-  form: { gap: SPACING.sm, position: 'relative' }, connector: { position: 'absolute', left: 17, top: 76, alignItems: 'center' }, dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.forest }, endDot: { backgroundColor: COLORS.coral }, line: { width: 1, height: 31, backgroundColor: COLORS.line },
-  support: { flexDirection: 'row', gap: 12, alignItems: 'center' }, supportTitle: { color: COLORS.ink, fontWeight: '800', fontSize: 13 }, supportBody: { color: COLORS.inkSoft, fontSize: 11, lineHeight: 16, marginTop: 3 }, error: { color: COLORS.error, fontWeight: '700', fontSize: 13 },
-  result: { gap: 12, borderColor: COLORS.forest }, resultTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 }, best: { color: COLORS.forest, fontSize: 9, fontWeight: '900', letterSpacing: 1 }, provider: { color: COLORS.inkSoft, fontSize: 11, fontWeight: '700' }, times: { color: COLORS.ink, fontWeight: '900', fontSize: 24 }, route: { color: COLORS.inkSoft, fontSize: 13 }, tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 }, tag: { backgroundColor: COLORS.forestSoft, color: COLORS.forest, fontSize: 10, fontWeight: '700', paddingHorizontal: 9, paddingVertical: 6, borderRadius: RADIUS.pill }, continue: { minHeight: 48, backgroundColor: COLORS.forest, borderRadius: RADIUS.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }, continueText: { color: COLORS.white, fontWeight: '800' },
+  flex: { flex: 1 }, headingRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, },
+  kicker: { color: '#657C79', fontSize: 12, fontWeight: '800', letterSpacing: 1.6 },
+  heading: { color: '#16314B', fontSize: 30, lineHeight: 37, fontWeight: '900', marginTop: 12 },
+  close: { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.cream, alignItems: 'center', justifyContent: 'center' },
+  locations: { backgroundColor: COLORS.forest, borderRadius: 23, padding: 16, gap: 8 },
+  fieldLabel: { color: '#fefeff', fontWeight: '800', fontSize: 14, marginBottom: 7 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 55, borderWidth: 1,
+    borderColor: '#D5E3F0', backgroundColor: COLORS.white, borderRadius: 14, paddingHorizontal: 14 },
+  focused: { borderColor: '#2485CE', borderWidth: 2 },
+  input: { flex: 1, color: '#173653', fontSize: 16, fontWeight: '700', paddingVertical: 14, minWidth: 0 },
+  preferences: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderColor: '#D5E3F0', borderRadius: 17, padding: 17 },
+  preferenceTitle: { color: '#173653', fontSize: 17, fontWeight: '800', lineHeight: 24 },
+  preferenceBody: { color: '#536B83', fontSize: 15, lineHeight: 23, marginTop: 4 },
+  error: { color: COLORS.error, fontSize: 14, fontWeight: '700' }, note: { color: '#536B83', fontSize: 13, lineHeight: 20 },
+  resultsHeading: { gap: 8 }, resultHeading: { color: '#16314B', fontSize: 23, fontWeight: '800' },
+  routeWrap: { marginTop: 12 }, routeCard: { borderColor: '#D5E3F0', borderRadius: 21, gap: 12, paddingTop: 26 },
+  recommended: { borderColor: '#144F85', borderWidth: 2 }, selected: { borderColor: '#144F85', borderWidth: 3, backgroundColor: '#F8FCFF' },
+  best: { position: 'absolute', top: -15, left: 18, paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', gap: 5,
+    alignItems: 'center', borderRadius: 20, backgroundColor: '#B7EFDC' },
+  bestText: { color: '#144F85', fontSize: 12, fontWeight: '800' },
+  times: { flexDirection: 'row', alignItems: 'center', gap: 10 }, time: { color: '#16314B', fontSize: 21, fontWeight: '800' },
+  timeLine: { flex: 1, height: 1, backgroundColor: '#D5E3F0' },
+  routeMain: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
+  mode: { backgroundColor: '#EBF5FF', borderRadius: 11, padding: 9, flexDirection: 'row', gap: 5, alignItems: 'center' },
+  service: { color: '#144F85', fontSize: 15, fontWeight: '800' }, routeCopy: { flex: 1, minWidth: 120 },
+  duration: { color: '#173653', fontSize: 16, fontWeight: '800' }, routeText: { color: '#536B83', fontSize: 14, lineHeight: 20, marginTop: 4 },
+  price: { color: '#173653', fontSize: 19, fontWeight: '800' },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, tag: { backgroundColor: '#E9F3FF', color: '#144F85', fontSize: 12,
+    borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 6 },
+  selectedLabel: { color: '#144F85', fontWeight: '800', fontSize: 13 },
 });

@@ -23,11 +23,13 @@ const quickActions: QuickAction[] = [
 ];
 
 export function useDashboardViewModel() {
-  const { profile, currentJourney, latestTicket } = useTravelmateStore();
+  const { profile, currentJourney, latestTicket, dismissedTicketBannerId, dismissTicketBanner } = useTravelmateStore();
   return {
     passengerName: profile.preferredName,
     currentJourney,
     latestTicket,
+    showTicketBanner: Boolean(latestTicket && latestTicket.ticketId !== dismissedTicketBannerId),
+    onDismissTicketBanner: () => { if (latestTicket) dismissTicketBanner(latestTicket.ticketId); },
     quickActions,
   };
 }

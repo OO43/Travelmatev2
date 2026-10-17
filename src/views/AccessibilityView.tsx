@@ -1,69 +1,51 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
-
-import { AppHeader, Card, PrimaryButton, ScreenContainer } from '@/components/ui';
+import { StyleSheet, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
+import { AppHeader, Card, ScreenContainer } from '@/components/ui';
+import { PreferenceSwitch } from '@/components/PreferenceSwitch';
+import { SelectField } from '@/components/SelectField';
 import type { PassengerProfile } from '@/models/passenger';
-import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '@/theme';
+import { COLORS } from '@/theme';
 
-const needLabels: Record<keyof PassengerProfile['accessibilityNeeds'], string> = {
-  visualImpairment: 'Visual support',
-  hearingImpairment: 'Hearing support',
-  reducedMobility: 'Reduced mobility',
-  wheelchairUser: 'Wheelchair access',
-  cognitiveSupportRequired: 'Cognitive support',
-  assistanceAnimalSupport: 'Assistance animal support',
-  temporaryAccessibilityNeed: 'Temporary accessibility support',
-};
-
-const preferenceLabels: Record<keyof PassengerProfile['assistancePreferences'], string> = {
-  audioGuidance: 'Audio guidance',
-  vibrationGuidance: 'Vibration guidance',
-  boardingAssistance: 'Boarding assistance',
-  alightingAssistance: 'Alighting assistance',
-  extraBoardingTime: 'Extra boarding time',
-  stopAnnouncements: 'Stop announcements',
-};
-
-export function AccessibilityView({ profile, onEditProfile }: { profile: PassengerProfile; onEditProfile: () => void }) {
-  const activeNeeds = Object.entries(profile.accessibilityNeeds).filter(([, enabled]) => enabled) as [keyof PassengerProfile['accessibilityNeeds'], boolean][];
-  const activePreferences = Object.entries(profile.assistancePreferences).filter(([, enabled]) => enabled) as [keyof PassengerProfile['assistancePreferences'], boolean][];
-
-  return (
-    <ScreenContainer header={<AppHeader title="Accessibility" subtitle="Support tailored to every journey" />}>
-      <Card style={styles.summary}>
-        <View style={styles.summaryIcon}><Ionicons name="accessibility" size={28} color={COLORS.forest} /></View>
-        <View style={styles.flex}><Text style={styles.summaryTitle}>Your travel support is active</Text><Text style={styles.body}>TravelMate applies these preferences when planning and monitoring journeys.</Text></View>
-      </Card>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Accessibility needs</Text>
-        <Card style={styles.list}>{activeNeeds.length ? activeNeeds.map(([key]) => <PreferenceRow key={key} label={needLabels[key]} />) : <Text style={styles.body}>No accessibility needs selected.</Text>}</Card>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Assistance preferences</Text>
-        <Card style={styles.list}>{activePreferences.map(([key]) => <PreferenceRow key={key} label={preferenceLabels[key]} />)}</Card>
-      </View>
-
-      <PrimaryButton label="Edit accessibility profile" icon="create" onPress={onEditProfile} />
-    </ScreenContainer>
-  );
+const groups: { title: string; rows: [keyof PassengerProfile['assistancePreferences'], string, string][] }[] = [
+  { title: 'Seeing and hearing', rows: [
+    ['vibrationGuidance', 'Vibration alerts', 'Save your preference for turns, stops and updates.'],
+    ['largeText', 'Large text', 'Enlarge text across the app.'],
+    ['highContrast', 'High contrast', 'Increase contrast for text, fields and cards.'],
+    ['audioGuidance', 'Audio guidance', 'Save your preference for spoken journey instructions.'],
+    ['stopAnnouncements', 'Stop announcements', 'Save your preference for stop announcements.'],
+  ] },
+  { title: 'Moving and boarding', rows: [
+    ['stepFreeRoutes', 'Step-free routes', 'Prefer routes without stairs.'],
+    ['boardingAssistance', 'Boarding assistance', 'Save your preference for help boarding.'],
+    ['alightingAssistance', 'Alighting assistance', 'Save your preference for help leaving the vehicle.'],
+    ['extraBoardingTime', 'Extra boarding time', 'Allow more time getting onto the vehicle.'],
+    ['extraTransferTime', 'Extra transfer time', 'Allow more time when changing services.'],
+    ['prioritySeating', 'Priority seating', 'Save a priority-seating preference.'],
+  ] },
+];
+export function AccessibilityView({ profile, saved, updatePreference, updateConsent, title = 'My support needs', onBack }: {
+  title?: string; onBack?: () => void;
+  profile: PassengerProfile; saved: boolean;
+  updatePreference: (key: keyof PassengerProfile['assistancePreferences'], value: boolean) => void;
+  updateConsent: <K extends 'sharingPreference' | 'personalisedSuggestions' | 'enhancedSupervision'>(key: K, value: PassengerProfile[K]) => void;
+}) {
+  return <ScreenContainer header={<AppHeader title={title} subtitle="Changes save automatically on this device" onBack={onBack} />}>
+    {saved ? <Text accessibilityRole="alert" style={styles.saved}>Saved</Text> : null}
+    <Text style={styles.body}>Guidance and route preferences are recorded for integration. They do not activate live audio, reminders or staff assistance yet.</Text>
+    {groups.map(group => <Card key={group.title}><Text style={styles.title}>{group.title}</Text>
+      {group.rows.map(([key, label, description]) => <PreferenceSwitch key={key} label={label} description={description}
+        value={Boolean(profile.assistancePreferences[key])} onChange={value => updatePreference(key, value)} />)}</Card>)}
+    <Card><Text style={styles.title}>Consent and data use</Text>
+      <View style={styles.gap}><SelectField label="Share needs with transport staff" value={profile.sharingPreference ?? 'needed'}
+        options={[{ label: 'Only when needed', value: 'needed' }, { label: 'Every journey', value: 'always' }, { label: 'Never', value: 'never' }]}
+        onChange={value => updateConsent('sharingPreference', value as PassengerProfile['sharingPreference'])} /></View>
+      <PreferenceSwitch label="Personalised journey suggestions" description="Allow preferences to inform future recommendations."
+        value={profile.personalisedSuggestions ?? true} onChange={value => updateConsent('personalisedSuggestions', value)} />
+      <PreferenceSwitch label="Enhanced supervision" description="Consent to enhanced supervision during a confirmed journey."
+        value={Boolean(profile.enhancedSupervision)} onChange={value => updateConsent('enhancedSupervision', value)} />
+    </Card>
+  </ScreenContainer>;
 }
-
-function PreferenceRow({ label }: { label: string }) {
-  return <View style={styles.preference}><Ionicons name="checkmark-circle" size={20} color={COLORS.success} /><Text style={styles.preferenceText}>{label}</Text></View>;
-}
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  summary: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: COLORS.forestSoft },
-  summaryIcon: { width: 54, height: 54, borderRadius: RADIUS.md, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
-  summaryTitle: { color: COLORS.ink, ...TYPOGRAPHY.cardTitle },
-  body: { color: COLORS.inkSoft, ...TYPOGRAPHY.bodySmall, marginTop: 3 },
-  section: { gap: SPACING.md },
-  sectionTitle: { color: COLORS.ink, ...TYPOGRAPHY.sectionTitle },
-  list: { gap: 12 },
-  preference: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  preferenceText: { color: COLORS.ink, ...TYPOGRAPHY.body, fontWeight: '700' },
-});
+const styles = StyleSheet.create({ title: { fontSize: 20, fontWeight: '800', color: COLORS.ink },
+  body: { fontSize: 14, lineHeight: 22, color: COLORS.inkSoft }, saved: { color: COLORS.success, fontWeight: '800' }, gap: { marginTop: 16 } });
 

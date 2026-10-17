@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, type BarcodeScanningResult } from 'expo-camera';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -14,10 +15,26 @@ export function TicketScannerView({ permissionGranted, canAskAgain, isProcessing
 }) {
   const cameraRef = useRef<CameraView>(null);
   const [mode, setMode] = useState<'barcode' | 'document'>('barcode');
+  const [cameraReady, setCameraReady] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureError, setCaptureError] = useState('');
+  const captureLocked = useRef(false);
 
   async function captureDocument() {
-    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.7 });
-    if (photo?.uri) onDocumentCaptured(photo.uri);
+    if (!cameraReady || !cameraRef.current || captureLocked.current || isProcessing) return;
+    captureLocked.current = true;
+    setIsCapturing(true);
+    setCaptureError('');
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
+      if (!photo?.uri) throw new Error('No image returned');
+      onDocumentCaptured(photo.uri);
+    } catch {
+      setCaptureError('The camera could not capture your ticket. Try again. If this continues, close and reopen the scanner.');
+    } finally {
+      captureLocked.current = false;
+      setIsCapturing(false);
+    }
   }
 
   if (!permissionGranted) {
@@ -27,21 +44,24 @@ export function TicketScannerView({ permissionGranted, canAskAgain, isProcessing
   return (
     <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={styles.screen}>
       <AppHeader title="Ticket intelligence" subtitle="Barcode + document capture" onBack={onBack} />
-      <View style={styles.switcher}>{(['barcode', 'document'] as const).map((item) => <Pressable key={item} onPress={() => { setMode(item); onRetry(); }} style={[styles.switch, mode === item && styles.switchActive]}><Ionicons name={item === 'barcode' ? 'barcode' : 'document-text'} size={18} color={mode === item ? COLORS.white : COLORS.forest} /><Text style={[styles.switchText, mode === item && styles.switchTextActive]}>{item === 'barcode' ? 'Barcode / QR' : 'Printed ticket'}</Text></Pressable>)}</View>
+      <View style={styles.switcher}>{(['barcode', 'document'] as const).map((item) => <Pressable key={item} disabled={isCapturing || isProcessing} onPress={() => { setMode(item); setCaptureError(''); onRetry(); }} style={[styles.switch, mode === item && styles.switchActive]}><Ionicons name={item === 'barcode' ? 'barcode' : 'document-text'} size={18} color={mode === item ? COLORS.white : COLORS.forest} /><Text style={[styles.switchText, mode === item && styles.switchTextActive]}>{item === 'barcode' ? 'Barcode / QR' : 'Printed ticket'}</Text></Pressable>)}</View>
       <View style={styles.cameraWrap}>
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
           facing="back"
+          mode="picture"
+          onCameraReady={() => { setCameraReady(true); setCaptureError(''); }}
+          onMountError={() => { setCameraReady(false); setCaptureError('The camera could not start. Close and reopen the scanner.'); }}
           barcodeScannerSettings={{ barcodeTypes: ['qr', 'pdf417', 'aztec', 'code128', 'ean13'] }}
           onBarcodeScanned={mode === 'barcode' && !scanLocked ? onBarcode : undefined}
         />
         <View pointerEvents="none" style={styles.overlay}><View style={mode === 'barcode' ? styles.scanFrame : styles.documentFrame} /><Text style={styles.instructions}>{mode === 'barcode' ? 'Place the code inside the frame' : 'Fit the complete printed ticket inside the frame'}</Text></View>
       </View>
       <View style={styles.footer}>
-        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+        {captureError || error ? <Text accessibilityRole="alert" style={styles.error}>{captureError || error}</Text> : null}
         {isProcessing ? <View style={styles.processing}><ActivityIndicator color={COLORS.forest} /><Text style={styles.processingText}>Reading journey information…</Text></View> : null}
-        {mode === 'document' ? <PrimaryButton label="Capture and analyse ticket" icon="scan" onPress={captureDocument} loading={isProcessing} /> : null}
+        {mode === 'document' ? <PrimaryButton label={cameraReady ? 'Capture and analyse ticket' : 'Starting camera…'} icon="scan" onPress={() => void captureDocument()} disabled={!cameraReady} loading={isCapturing || isProcessing} /> : null}
         {mode === 'barcode' && scanLocked && !isProcessing ? <PrimaryButton label="Scan another code" icon="refresh" variant="secondary" onPress={onRetry} /> : null}
         <Text style={styles.privacy}>Ticket images should be sent only to the configured TravelMate document-intelligence API. Without one, this build returns clearly marked demo extraction data.</Text>
       </View>

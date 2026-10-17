@@ -39,8 +39,8 @@ export default function MainTabsLayout() {
       <Tabs.Screen
         name="accessibility"
         options={{
-          title: 'Accessibility',
-          tabBarIcon: ({ color, size }) => <Ionicons name="accessibility" color={color} size={size} />,
+          title: 'Get help',
+          tabBarIcon: ({ color, size }) => <Ionicons name="hand-left" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -53,7 +53,7 @@ export default function MainTabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Account',
           tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
         }}
       />
