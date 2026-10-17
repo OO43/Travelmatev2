@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { AppText as Text } from '@/components/AppText';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Card } from '@/components/Card';
@@ -25,22 +26,33 @@ export function DashboardView({
   quickActions,
   currentJourney,
   latestTicket,
+  showTicketBanner,
+  onDismissTicketBanner,
   onSelectMode,
   onScanTicket,
   onOpenJourney,
   onOpenProfile,
+  onAssistance,
+  onAlerts,
+  unreadCount,
 }: {
   passengerName: string;
   quickActions: QuickAction[];
   currentJourney: Journey | null;
   latestTicket: TicketIntelligenceResult | null;
+  showTicketBanner: boolean;
+  onDismissTicketBanner: () => void;
   onSelectMode: (mode: TransportMode) => void;
   onScanTicket: () => void;
   onOpenJourney: () => void;
   onOpenProfile: () => void;
+  onAssistance: () => void;
+  onAlerts: () => void;
+  unreadCount: number;
 }) {
   return (
-    <ScreenContainer header={<AppHeader title={`Hello, ${passengerName}`} subtitle="Where are you travelling today?" onProfile={onOpenProfile} />}>
+    <ScreenContainer header={<AppHeader title={`Hello, ${passengerName}`} subtitle="Where are you travelling today?" onProfile={onOpenProfile} onAlerts={onAlerts} unreadCount={unreadCount} />}>
+      <PrimaryButton label="Get help / request assistance" icon="hand-left" onPress={onAssistance} variant="secondary" />
       <Card style={styles.scannerCard}>
         <View style={styles.scannerIcon}><Ionicons name="scan" size={28} color={COLORS.white} /></View>
         <View style={styles.flex}>
@@ -51,10 +63,14 @@ export function DashboardView({
         <PrimaryButton label="Scan ticket" icon="camera" onPress={onScanTicket} variant="coral" />
       </Card>
 
-      {latestTicket ? (
+      {latestTicket && showTicketBanner ? (
         <View style={styles.ticketNotice}>
           <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
           <Text style={styles.ticketNoticeText}>{TRANSPORT_LABELS[latestTicket.mode]} ticket ready · {Math.round(latestTicket.confidence * 100)}% confidence</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Dismiss ticket ready message"
+            onPress={onDismissTicketBanner} style={styles.dismissTicket}>
+            <Ionicons name="close" size={20} color={COLORS.forest} />
+          </Pressable>
         </View>
       ) : null}
 
@@ -103,7 +119,7 @@ export function DashboardView({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 }, section: { gap: SPACING.md },
+  flex: { flex: 1 }, section: { gap: SPACING.md,},
   scannerCard: { backgroundColor: COLORS.forestDeep, borderColor: COLORS.forestDeep, gap: SPACING.md },
   scannerIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
   scannerKicker: { color: '#9DD4C7', ...TYPOGRAPHY.eyebrow },
@@ -111,6 +127,7 @@ const styles = StyleSheet.create({
   scannerBody: { color: '#C9DDD8', ...TYPOGRAPHY.bodySmall, marginTop: 6 },
   ticketNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.forestSoft, padding: 12, borderRadius: RADIUS.sm },
   ticketNoticeText: { color: COLORS.forest, flex: 1, fontWeight: '700', fontSize: 12 },
+  dismissTicket: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   eyebrow: { color: COLORS.forest, ...TYPOGRAPHY.eyebrow, letterSpacing: 1.3 },
   sectionTitle: { color: COLORS.ink, ...TYPOGRAPHY.sectionTitle, marginTop: 3 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },

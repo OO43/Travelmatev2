@@ -13,6 +13,9 @@ export type JourneyPlannerInput = {
   origin: string;
   destination: string;
   departureDate?: string;
+  departureTime?: string;
+  useAccessibilityPreferences?: boolean;
+  extraTransferTime?: boolean;
   ticketReference?: string;
 };
 
@@ -28,6 +31,12 @@ export type JourneyTimelineItem = {
 export type Journey = {
   id: string;
   mode: TransportMode;
+  departureDate?: string;
+  price?: string;
+  arrivalDate?: string;
+  changes?: number;
+  recommended?: boolean;
+  useAccessibilityPreferences?: boolean;
   provider: string;
   serviceNumber: string;
   origin: string;

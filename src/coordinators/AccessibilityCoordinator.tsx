@@ -1,10 +1,6 @@
 import { router } from 'expo-router';
-
-import { useAccessibilityViewModel } from '@/viewModels/useAccessibilityViewModel';
-import { AccessibilityView } from '@/views/AccessibilityView';
-
+import { AssistanceView } from '@/views/AssistanceView';
 export default function AccessibilityCoordinator() {
-  const viewModel = useAccessibilityViewModel();
-  return <AccessibilityView {...viewModel} onEditProfile={() => router.navigate('/profile')} />;
+  return <AssistanceView onSupport={() => router.push('/settings')} onHelp={() => router.push('/help')} />;
 }
 

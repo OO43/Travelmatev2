@@ -7,8 +7,9 @@ import type {
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-if (!API_URL) {
-  throw new Error('EXPO_PUBLIC_API_URL is not configured.');
+function apiUrl() {
+  if (!API_URL) throw new Error('Set EXPO_PUBLIC_API_URL in .env to connect the journey-session backend.');
+  return API_URL.replace(/\/$/, '');
 }
 
 export function supportOptionsFromProfile(
@@ -35,7 +36,7 @@ export function supportOptionsFromProfile(
 export async function createJourneySession(
   payload: CreateJourneySessionRequest,
 ): Promise<JourneySession> {
-  const response = await fetch(`${API_URL}/api/v1/journey-sessions`, {
+  const response = await fetch(`${apiUrl()}/api/v1/journey-sessions`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -59,7 +60,7 @@ export async function getJourneySession(
   sessionId: string,
 ): Promise<JourneySession> {
   const response = await fetch(
-    `${API_URL}/api/v1/journey-sessions/${encodeURIComponent(sessionId)}`,
+    `${apiUrl()}/api/v1/journey-sessions/${encodeURIComponent(sessionId)}`,
   );
 
   if (!response.ok) {

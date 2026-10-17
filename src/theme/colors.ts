@@ -7,6 +7,7 @@
 export const COLORS = {
   forestDeep: '#144f85e9',
   forest: '#144f85e9',
+  forestLight: '#1c49739a',
   forestSoft: '#ddf2eac3',
   cream: '#F7F4EC',
   surface: '#FFFFFF',

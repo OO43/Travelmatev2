@@ -13,8 +13,9 @@ export default function JourneyStatusCoordinator() {
     ? params.sessionId[0]
     : params.sessionId;
 
-  const { currentJourney } = useTravelmateStore();
-  const viewModel = useJourneyStatusViewModel(sessionId);
+  const { currentJourney, journeys } = useTravelmateStore();
+  const effectiveSessionId = sessionId ?? journeys.find(item => item.journey.id === currentJourney?.id)?.sessionId;
+  const viewModel = useJourneyStatusViewModel(effectiveSessionId);
 
   return (
     <JourneyStatusView
@@ -22,7 +23,7 @@ export default function JourneyStatusCoordinator() {
       journeySession={viewModel.journeySession}
       isLoading={viewModel.isLoading}
       errorMessage={viewModel.errorMessage}
-      hasSessionId={Boolean(sessionId)}
+      hasSessionId={Boolean(effectiveSessionId)}
       onRetry={viewModel.retry}
       onBack={() => router.back()}
       onFeedback={() => router.push('/feedback')}
