@@ -45,7 +45,7 @@ export async function signUp(
     session: {
       token: 'travelmate-demo-token',
       user: {
-        id: 'passenger-demo-signup',
+        id: `passenger-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         email,
         name,
       },

@@ -23,14 +23,17 @@ const groups: { title: string; rows: [keyof PassengerProfile['assistancePreferen
     ['prioritySeating', 'Priority seating', 'Save a priority-seating preference.'],
   ] },
 ];
-export function AccessibilityView({ profile, saved, updatePreference, updateConsent, title = 'My support needs', onBack }: {
+export function AccessibilityView({ profile, saved, syncing, error, updatePreference, updateConsent, title = 'My support needs', onBack }: {
   title?: string; onBack?: () => void;
   profile: PassengerProfile; saved: boolean;
+  syncing: boolean; error: string;
   updatePreference: (key: keyof PassengerProfile['assistancePreferences'], value: boolean) => void;
   updateConsent: <K extends 'sharingPreference' | 'personalisedSuggestions' | 'enhancedSupervision'>(key: K, value: PassengerProfile[K]) => void;
 }) {
-  return <ScreenContainer header={<AppHeader title={title} subtitle="Changes save automatically on this device" onBack={onBack} />}>
-    {saved ? <Text accessibilityRole="alert" style={styles.saved}>Saved</Text> : null}
+  return <ScreenContainer header={<AppHeader title={title} subtitle="Changes save automatically" onBack={onBack} />}>
+    {syncing ? <Text accessibilityLiveRegion="polite" style={styles.syncing}>Syncing…</Text> : null}
+    {saved ? <Text accessibilityRole="alert" style={styles.saved}>Saved and synced</Text> : null}
+    {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     <Text style={styles.body}>Guidance and route preferences are recorded for integration. They do not activate live audio, reminders or staff assistance yet.</Text>
     {groups.map(group => <Card key={group.title}><Text style={styles.title}>{group.title}</Text>
       {group.rows.map(([key, label, description]) => <PreferenceSwitch key={key} label={label} description={description}
@@ -47,5 +50,7 @@ export function AccessibilityView({ profile, saved, updatePreference, updateCons
   </ScreenContainer>;
 }
 const styles = StyleSheet.create({ title: { fontSize: 20, fontWeight: '800', color: COLORS.ink },
-  body: { fontSize: 14, lineHeight: 22, color: COLORS.inkSoft }, saved: { color: COLORS.success, fontWeight: '800' }, gap: { marginTop: 16 } });
+  body: { fontSize: 14, lineHeight: 22, color: COLORS.inkSoft }, saved: { color: COLORS.success, fontWeight: '800' },
+  syncing: { color: COLORS.forest, fontWeight: '800' }, error: { color: COLORS.error, fontWeight: '700', lineHeight: 20 },
+  gap: { marginTop: 16 } });
 

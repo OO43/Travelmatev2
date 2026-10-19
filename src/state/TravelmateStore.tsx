@@ -33,6 +33,7 @@ type StoreValue = StoredState & {
   setLatestTicket: (ticket: TicketIntelligenceResult | null) => void;
   dismissTicketBanner: (ticketId: string) => void;
   setProfile: (profile: PassengerProfile) => void;
+  replaceProfile: (profile: PassengerProfile) => void;
   rememberSession: (journeyId: string, sessionId: string) => void;
   archiveJourney: (journeyId: string) => void;
   addPlace: (label: string, location: string) => void;
@@ -80,7 +81,8 @@ export function TravelmateStoreProvider({ children }: PropsWithChildren) {
       ? { ...current, dismissedTicketBannerId: ticketId } : current),
     setProfile: profile => setState(current => ({ ...current, profile,
       alerts: [notification({ category: 'general', type: 'Preferences', title: 'Your profile and support preferences were updated',
-        message: 'Changes saved on this device. Backend profile sync is not connected yet.', tone: 'mint' }), ...current.alerts].slice(0, 100) })),
+        message: 'Your latest profile changes were saved.', tone: 'mint' }), ...current.alerts].slice(0, 100) })),
+    replaceProfile: profile => setState(current => ({ ...current, profile })),
     setCurrentJourney: journey => setState(current => ({ ...current, currentJourney: journey,
       journeys: journey ? [{ journey, archived: false,
         sessionId: current.journeys.find(item => item.journey.id === journey.id)?.sessionId },

@@ -9,7 +9,7 @@ const groups = [
   { title: 'Accounts', icon: 'person-outline', topics: [
     { title: 'Can’t sign in', body: 'Check your email address and password, and try again. This test build uses the demo login listed in the testing guide. Password reset and real account authentication are coming in the account backend phase.' },
     { title: 'Account settings', body: 'Open Account → Manage account to update your name, contact details, home location and preferred language. Tap Save changes. Use Account → Settings for support preferences and consent.' },
-    { title: 'My changes aren’t showing', body: 'Save personal-information edits before leaving Manage account. Support settings save automatically. In this build, saved details belong to this device and do not sync to another device yet.' },
+    { title: 'My changes aren’t showing', body: 'Save personal-information edits before leaving Manage account. Support settings save automatically. If syncing fails, TravelMate keeps the latest changes on this device and shows a message so you can retry later.' },
   ] },
   { title: 'Guides', icon: 'book-outline', topics: [
     { title: 'Signing up', body: 'Choose Create account from the sign-in screen, enter your name, email and password, then continue. Signup currently creates a demo session; it does not register a production account.' },
