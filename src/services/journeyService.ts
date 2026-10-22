@@ -1,96 +1,88 @@
-import type { Journey, JourneyPlannerInput, TransportMode } from '@/models/journey';
+import type { Journey, JourneyLeg, JourneyPlannerInput, LocationOption } from '@/models/journey';
+import { planJourneyOptions as planDemoOptions } from '@/services/demoJourneyService';
 
-const wait = (milliseconds: number) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-const modeDetails: Record<TransportMode, {
-  provider: string;
-  serviceNumber: string;
-  durationMinutes: number;
-  platform?: string;
-  gate?: string;
-  stops?: number;
-}> = {
-  bus: { provider: 'First Bus', serviceNumber: '24', durationMinutes: 28, stops: 8 },
-  train: { provider: 'Avanti West Coast', serviceNumber: '1A42', durationMinutes: 72, platform: '4' },
-  flight: { provider: 'British Airways', serviceNumber: 'BA1475', durationMinutes: 85, gate: 'B14' },
-  car: { provider: 'TravelMate Cars', serviceNumber: 'TM-204', durationMinutes: 24 },
+export type LocationChoices = { origin: LocationOption[]; destination: LocationOption[] };
+export class JourneyPlanningError extends Error {
+  constructor(message: string, readonly choices?: LocationChoices) { super(message); this.name = 'JourneyPlanningError'; }
+}
+type TflRoute = {
+  id: string; source: 'tfl'; mode: 'bus' | 'train'; provider: string; service_number: string;
+  origin: string; destination: string; departure_at: string; arrival_at: string;
+  duration_minutes: number; changes: number; fare_pence: number | null;
+  accessibility_features: string[]; warnings: string[]; legs: JourneyLeg[];
 };
+type TflResponse = { source: 'tfl'; fetched_at: string; journeys: TflRoute[] };
 
-function timelineFor(mode: TransportMode, origin: string, destination: string) {
-  const middle = mode === 'flight'
-    ? 'Security and gate guidance'
-    : mode === 'train'
-      ? 'Platform and boarding guidance'
-      : 'Accessible boarding point';
-
-  return [
-    { id: 'ready', title: 'Journey ready', detail: `Start from ${origin}`, time: '09:20', completed: true },
-    { id: 'boarding', title: middle, detail: 'Assistance preferences have been applied', time: '09:35', completed: false, current: true },
-    { id: 'travel', title: 'Travel in progress', detail: 'Live updates and reminders appear here', completed: false },
-    { id: 'arrival', title: `Arrive at ${destination}`, detail: 'TravelMate will alert you before arrival', completed: false },
-  ];
+export function mapTflJourney(route: TflRoute, fetchedAt: string, input: JourneyPlannerInput): Journey {
+  // The API returns Europe/London timestamps. Preserve London date/time even when the phone uses a different timezone.
+  return {
+    id: route.id, source: 'tfl', fetchedAt, mode: route.mode, provider: route.provider,
+    serviceNumber: route.service_number, origin: route.origin, destination: route.destination,
+    departureDate: route.departure_at.slice(0, 10), arrivalDate: route.arrival_at.slice(0, 10),
+    departureTime: route.departure_at.slice(11, 16), arrivalTime: route.arrival_at.slice(11, 16),
+    durationMinutes: route.duration_minutes, status: 'planned', changes: route.changes,
+    price: route.fare_pence === null ? 'Fare unavailable' : '£' + (route.fare_pence / 100).toFixed(2),
+    useAccessibilityPreferences: input.useAccessibilityPreferences ?? true,
+    ticketReference: input.ticketReference, accessibilityFeatures: route.accessibility_features,
+    warnings: route.warnings, legs: route.legs,
+    timeline: [...route.legs.map((leg, index) => ({
+      id: `${route.id}-leg-${index}`, title: leg.instruction || `${leg.origin} → ${leg.destination}`,
+      detail: `${leg.origin} → ${leg.destination} · ${leg.duration_minutes} min`,
+      time: leg.departure_at.slice(11, 16), completed: false,
+    })), { id: `${route.id}-arrival`, title: `Arrive at ${route.destination}`,
+      detail: 'TfL planned arrival. Automatic tracking and stop reminders are not connected.',
+      time: route.arrival_at.slice(11, 16), completed: false }],
+  };
 }
 
-export async function planJourney(input: JourneyPlannerInput): Promise<Journey> {
-  await wait(650);
-  const details = modeDetails[input.mode];
-
-  return {
-    id: `JRN-${Date.now()}`,
-    mode: input.mode,
-    provider: details.provider,
-    serviceNumber: details.serviceNumber,
-    origin: input.origin,
-    destination: input.destination,
-    departureTime: '09:40',
-    arrivalTime: input.mode === 'flight' ? '11:05' : input.mode === 'train' ? '10:52' : '10:08',
-    durationMinutes: details.durationMinutes,
-    status: 'boarding',
-    platform: details.platform,
-    gate: details.gate,
-    stops: details.stops,
-    ticketReference: input.ticketReference,
-    accessibilityFeatures: ['Step-free route', 'Haptic reminders', 'Extra boarding time'],
-    timeline: timelineFor(input.mode, input.origin, input.destination),
-  };
+function isResponse(value: unknown): value is TflResponse {
+  if (!value || typeof value !== 'object') return false;
+  const response = value as Partial<TflResponse>;
+  return response.source === 'tfl' && typeof response.fetched_at === 'string' && Array.isArray(response.journeys)
+    && response.journeys.every(route => route && route.source === 'tfl' && typeof route.id === 'string'
+      && typeof route.departure_at === 'string' && typeof route.arrival_at === 'string'
+      && Array.isArray(route.legs) && Array.isArray(route.accessibility_features) && Array.isArray(route.warnings));
+}
+function locationChoices(value: unknown): LocationChoices | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const choices = value as Record<string, unknown>;
+  const list = (items: unknown): LocationOption[] => Array.isArray(items)
+    ? items.filter((item): item is LocationOption => item && typeof item.id === 'string' && typeof item.name === 'string') : [];
+  return { origin: list(choices.origin), destination: list(choices.destination) };
 }
 
 export async function planJourneyOptions(input: JourneyPlannerInput): Promise<Journey[]> {
-  const base = await planJourney(input);
-  const [hour, minute] = (input.departureTime ?? '09:40').split(':').map(Number);
-  const start = hour * 60 + minute;
-  const dateFor = (minutes: number) => {
-    if (!input.departureDate) return undefined;
-    const date = new Date(input.departureDate + 'T12:00:00');
-    date.setDate(date.getDate() + Math.floor(minutes / 1440));
-    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
-  };
-  const time = (minutes: number) => {
-    const value = ((minutes % 1440) + 1440) % 1440;
-    return String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
-  };
-  const directDuration = input.mode === 'bus' ? 18 : base.durationMinutes;
-  const alternativeService = { bus: '48', train: '1A48', flight: 'BA1481', car: 'TM-208' }[input.mode];
-  return [0, 1].map(index => {
-    const durationMinutes = directDuration + (index ? 12 + (input.useAccessibilityPreferences && input.extraTransferTime ? 8 : 0) : 0);
-    const departure = start + (index ? 15 : 5);
-    const accessibilityFeatures = input.useAccessibilityPreferences
-      ? ['Step-free', input.mode === 'bus' ? 'Low-floor bus' : 'Accessible boarding', 'Assistance available']
-      : ['Route preview'];
-    return {
-      ...base, id: base.id + '-' + index, departureDate: dateFor(departure), arrivalDate: dateFor(departure + durationMinutes),
-      departureTime: time(departure), arrivalTime: time(departure + durationMinutes),
-      durationMinutes, status: 'planned', serviceNumber: index ? alternativeService : base.serviceNumber,
-      price: input.mode === 'bus' ? (index ? '£2.50' : '£2.00') : input.mode === 'train' ? '£16.50' : input.mode === 'flight' ? '£95.00' : '£20.00',
-      changes: index && input.mode !== 'car' ? 1 : 0, recommended: index === 0,
-      useAccessibilityPreferences: input.useAccessibilityPreferences ?? true, accessibilityFeatures,
-      timeline: [
-        { id: 'ready', title: 'Journey planned', detail: 'Review this route preview before confirming.', time: time(start), completed: true },
-        { id: 'boarding', title: 'Boarding', detail: 'Use the selected boarding point.', time: time(departure), completed: false },
-        { id: 'travel', title: 'Travel', detail: 'Live tracking is not connected in this preview.', completed: false },
-        { id: 'arrival', title: 'Arrive at ' + input.destination, detail: 'Planned arrival time.', time: time(departure + durationMinutes), completed: false },
-      ],
-    };
-  });
+  if (process.env.EXPO_PUBLIC_JOURNEY_PROVIDER === 'demo') return planDemoOptions(input);
+  if (input.mode !== 'bus' && input.mode !== 'train') throw new JourneyPlanningError('TfL planning supports London bus and rail journeys. Flights and car hire need another provider.');
+  if (['current location', 'my location'].includes(input.origin.trim().toLowerCase())) throw new JourneyPlanningError('Enter a London station, stop or postcode in From. Device location is not connected yet.');
+  const baseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
+  if (!baseUrl) throw new JourneyPlanningError('Set EXPO_PUBLIC_API_URL in the app .env to your FastAPI address.');
+  const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 25000);
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/journeys/plan`, {
+      method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, signal: controller.signal,
+      body: JSON.stringify({ origin: input.origin, destination: input.destination,
+        origin_name: input.originName, destination_name: input.destinationName, mode: input.mode,
+        departure_date: input.departureDate, departure_time: input.departureTime,
+        step_free: Boolean(input.useAccessibilityPreferences && input.stepFree),
+        extra_transfer_time: Boolean(input.useAccessibilityPreferences && input.extraTransferTime) }),
+    });
+    const body: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      const error = body && typeof body === 'object' ? body as Record<string, unknown> : {};
+      throw new JourneyPlanningError(typeof error.message === 'string' ? error.message : `Journey search failed (${response.status}). Check your locations and try again.`,
+        error.code === 'LOCATION_AMBIGUOUS' ? locationChoices(error.details) : undefined);
+    }
+    if (!isResponse(body)) throw new JourneyPlanningError('The journey API returned unexpected data. Check the backend version.');
+    return body.journeys.map(route => mapTflJourney(route, body.fetched_at, input));
+  } catch (error) {
+    if (error instanceof JourneyPlanningError) throw error;
+    throw new JourneyPlanningError(controller.signal.aborted ? 'The journey search timed out. Please try again.' : 'Unable to reach the journey API. Check FastAPI, your Wi-Fi and EXPO_PUBLIC_API_URL.');
+  } finally { clearTimeout(timeout); }
+}
+
+export async function planJourney(input: JourneyPlannerInput): Promise<Journey> {
+  const options = await planJourneyOptions(input);
+  if (!options.length) throw new JourneyPlanningError('No routes found. Try a different time or location.');
+  return options[0];
 }

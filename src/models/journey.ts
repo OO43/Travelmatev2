@@ -16,6 +16,9 @@ export type JourneyPlannerInput = {
   departureTime?: string;
   useAccessibilityPreferences?: boolean;
   extraTransferTime?: boolean;
+  stepFree?: boolean;
+  originName?: string;
+  destinationName?: string;
   ticketReference?: string;
 };
 
@@ -30,6 +33,10 @@ export type JourneyTimelineItem = {
 
 export type Journey = {
   id: string;
+  source?: 'tfl' | 'demo';
+  fetchedAt?: string;
+  warnings?: string[];
+  legs?: JourneyLeg[];
   mode: TransportMode;
   departureDate?: string;
   price?: string;
@@ -52,6 +59,23 @@ export type Journey = {
   ticketReference?: string;
   accessibilityFeatures: string[];
   timeline: JourneyTimelineItem[];
+};
+
+export type LocationOption = { id: string; name: string };
+export type JourneyLeg = {
+  mode: string;
+  origin: string;
+  destination: string;
+  departure_at: string;
+  arrival_at: string;
+  duration_minutes: number;
+  instruction: string;
+  line_id: string | null;
+  line_name: string | null;
+  departure_stop_id: string | null;
+  arrival_stop_id: string | null;
+  stop_ids: string[];
+  disruptions: string[];
 };
 
 export const TRANSPORT_LABELS: Record<TransportMode, string> = {

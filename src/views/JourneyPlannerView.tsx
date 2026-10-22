@@ -5,7 +5,8 @@ import { AppText as Text } from '@/components/AppText';
 import { Card, PrimaryButton, ScreenContainer } from '@/components/ui';
 import { SelectField } from '@/components/SelectField';
 import { COLORS, RADIUS } from '@/theme';
-import type { Journey, TransportMode } from '@/models/journey';
+import type { Journey, LocationOption, TransportMode } from '@/models/journey';
+import type { LocationChoices } from '@/services/journeyService';
 import type { TicketIntelligenceResult } from '@/models/ticket';
 
 function dateChoices(start: string) {
@@ -23,7 +24,8 @@ const timeChoices = Array.from({ length: 96 }, (_, index) => {
 
 export function JourneyPlannerView({ mode, origin, destination, departureDate, departureTime, useAccessibilityPreferences,
   isPlanning, isConfirming, error, result, routes, ticket, onOriginChange, onDestinationChange,
-  onDateChange, onTimeChange, onPreferencesChange, onSelectRoute, onModeChange, onFind, onContinue, onBack }: {
+  onDateChange, onTimeChange, onPreferencesChange, onSelectRoute, onModeChange, onFind, onContinue, onBack,
+  locationChoices, chooseLocation }: {
   mode: TransportMode; origin: string; destination: string; departureDate: string; departureTime: string;
   useAccessibilityPreferences: boolean; isPlanning: boolean; isConfirming: boolean; error: string;
   result: Journey | null; routes: Journey[]; ticket: TicketIntelligenceResult | null;
@@ -31,6 +33,8 @@ export function JourneyPlannerView({ mode, origin, destination, departureDate, d
   onDateChange: (value: string) => void; onTimeChange: (value: string) => void; onPreferencesChange: (value: boolean) => void;
   onSelectRoute: (journey: Journey) => void; onFind: () => void; onContinue: () => void; onBack: () => void;
   onModeChange: (mode: TransportMode) => void;
+  locationChoices: LocationChoices;
+  chooseLocation: (field: 'origin' | 'destination', option: LocationOption) => void;
 }) {
   const [dates] = useState(() => dateChoices(departureDate));
   const icon = mode === 'flight' ? 'airplane-outline' : mode === 'train' ? 'train-outline' : mode === 'car' ? 'car-outline' : 'bus-outline';
@@ -46,25 +50,35 @@ export function JourneyPlannerView({ mode, origin, destination, departureDate, d
     <SelectField label="Transport" value={mode} disabled={isConfirming} bottomSheet
       options={[{ label: 'Bus', value: 'bus' }, { label: 'Train', value: 'train' }, { label: 'Flight', value: 'flight' }]}
       onChange={value => onModeChange(value as TransportMode)} />
+    <Text style={styles.note}>{process.env.EXPO_PUBLIC_JOURNEY_PROVIDER === 'demo'
+      ? 'Demo planner: sample routes for testing.'
+      : 'London routes powered by TfL. Enter a station, bus stop or postcode. Times are London local time.'}</Text>
     <View style={styles.locations}>
       <LocationField label="From" value={origin} onChange={onOriginChange} disabled={isConfirming} />
       <LocationField label="To" value={destination} onChange={onDestinationChange} disabled={isConfirming} />
     </View>
+    {(['origin', 'destination'] as const).map(field => locationChoices[field].length ? <View key={field} style={styles.locations}>
+      <Text style={styles.fieldLabel}>Choose your {field === 'origin' ? 'starting point' : 'destination'}</Text>
+      {locationChoices[field].map(option => <Pressable key={option.id} accessibilityRole="button" disabled={isConfirming}
+        onPress={() => chooseLocation(field, option)} style={styles.inputRow}>
+        <Text style={styles.routeText}>{option.name}</Text>
+      </Pressable>)}
+    </View> : null)}
     <SelectField label="Date" icon="calendar-outline" value={departureDate} options={dates} onChange={onDateChange} disabled={isConfirming} />
     <SelectField label="Leave at" icon="time-outline" value={departureTime} options={timeChoices} onChange={onTimeChange} disabled={isConfirming} />
     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: useAccessibilityPreferences, disabled: isConfirming }}
       disabled={isConfirming} onPress={() => onPreferencesChange(!useAccessibilityPreferences)} style={styles.preferences}>
       <Ionicons name={useAccessibilityPreferences ? 'checkbox' : 'square-outline'} size={25} color="#144F85" />
       <View style={styles.flex}><Text style={styles.preferenceTitle}>Use my accessibility preferences</Text>
-        <Text style={styles.preferenceBody}>Prioritise step-free routes and allow extra transfer time</Text></View>
+        <Text style={styles.preferenceBody}>Use your saved step-free and walking pace preferences. Assistance is not booked by a route search.</Text></View>
     </Pressable>
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     <PrimaryButton label={routes.length ? 'Refresh routes' : 'Find routes'} icon="search" loading={isPlanning}
       disabled={isConfirming} onPress={onFind} />
     {routes.length ? <>
       <Text style={styles.kicker}>{routes.length} ROUTES FOUND</Text>
-      <View style={styles.resultsHeading}><Text style={styles.resultHeading}>Recommended for you</Text><Text style={styles.note}>Preview results</Text></View>
-      <Text style={styles.note}>Sample routes, times and fares for testing.</Text>
+      <View style={styles.resultsHeading}><Text style={styles.resultHeading}>{routes[0]?.source === 'tfl' ? 'TfL route options' : 'Recommended for you'}</Text><Text style={styles.note}>{routes[0]?.source === 'tfl' ? 'Transport for London' : 'Preview results'}</Text></View>
+      <Text style={styles.note}>{routes[0]?.source === 'tfl' ? 'TfL journey data. Fares, where supplied, are estimates. Confirm accessibility with the operator; assistance and automatic tracking are not connected.' : 'Sample routes, times and fares for testing.'}</Text>
       {routes.map(route => <Pressable key={route.id} accessibilityRole="radio"
         accessibilityLabel={route.serviceNumber + ', ' + route.departureTime + ' to ' + route.arrivalTime + ', ' + route.price}
         accessibilityState={{ selected: result?.id === route.id, disabled: isConfirming }} disabled={isConfirming}
@@ -81,6 +95,7 @@ export function JourneyPlannerView({ mode, origin, destination, departureDate, d
             <Text style={styles.price}>{route.price}</Text>
           </View>
           <View style={styles.tags}>{route.accessibilityFeatures.map(feature => <Text key={feature} style={styles.tag}>{feature}</Text>)}</View>
+          {route.warnings?.map((warning, index) => <Text key={index} style={styles.note}>{warning}</Text>)}
           {result?.id === route.id ? <Text style={styles.selectedLabel}>Selected route</Text> : null}
         </Card>
       </Pressable>)}

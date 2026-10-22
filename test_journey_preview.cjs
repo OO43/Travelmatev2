@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 
 // Compile the real dependency-free demo service, without requiring a native runtime.
-const source = fs.readFileSync('src/services/journeyService.ts', 'utf8');
+const source = fs.readFileSync('src/services/demoJourneyService.ts', 'utf8');
 const output = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
 }).outputText;

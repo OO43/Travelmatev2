@@ -131,6 +131,12 @@ export function JourneyStatusView({
         </Card>
       ) : null}
 
+      {journey?.source === 'tfl' ? <Card>
+        <Text style={styles.emptyTitle}>Transport for London route</Text>
+        <Text style={styles.emptyBody}>Times are London local time. This is a planned route, not live vehicle tracking. Saving a session does not book staff assistance or activate stop reminders.</Text>
+        {journey.warnings?.map((warning, index) => <Text key={index} style={styles.emptyBody}>{warning}</Text>)}
+      </Card> : null}
+
       {journeySession ? (
         <>
           <Card>
@@ -139,7 +145,7 @@ export function JourneyStatusView({
               Status: {journeySession.status.toUpperCase()}
             </Text>
             <Text style={styles.emptyBody}>
-              Vehicle: {journeySession.vehicle_id}
+              {journeySession.vehicle_id.startsWith('planned-tfl-') ? 'Vehicle: not assigned' : 'Vehicle: ' + journeySession.vehicle_id}
             </Text>
             <Text style={styles.emptyBody}>
               Support sharing:{' '}
@@ -334,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   timelineRow: { flexDirection: 'row', minHeight: 80 },
-  timelineMarker: { width: 32, alignItems: 'center' },
+  timelineMarker: { width: 32, flexShrink: 0, alignItems: 'center' },
   dot: {
     width: 24,
     height: 24,
@@ -355,19 +361,23 @@ const styles = StyleSheet.create({
     width: 2,
     backgroundColor: COLORS.line,
   },
-  timelineCopy: { flex: 1, paddingBottom: SPACING.lg },
+  timelineCopy: { flex: 1, minWidth: 0, paddingBottom: SPACING.lg },
   rowBetween: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
   },
   timelineTitle: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
     color: COLORS.ink,
     fontWeight: '800',
     fontSize: 14,
   },
   currentTitle: { color: COLORS.coral },
-  timelineTime: { color: COLORS.inkSoft, fontSize: 13 },
+  timelineTime: { color: COLORS.inkSoft, fontSize: 13, flexShrink: 0, textAlign: 'right' },
   timelineDetail: {
     color: COLORS.inkSoft,
     fontSize: 12,
