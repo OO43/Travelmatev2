@@ -62,7 +62,11 @@ export type Journey = {
 };
 
 export type LocationOption = { id: string; name: string };
+export type MapCoordinate = { latitude: number; longitude: number };
 export type JourneyLeg = {
+  path?: MapCoordinate[];
+  departure_coordinate?: MapCoordinate | null;
+  arrival_coordinate?: MapCoordinate | null;
   mode: string;
   origin: string;
   destination: string;

@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ComponentProps } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
 import { AppText as Text } from '@/components/AppText';
 
 import { COLORS, RADIUS, SPACING, TYPOGRAPHY } from '@/theme';
@@ -14,6 +15,9 @@ export function PrimaryButton({
   loading = false,
   disabled = false,
   variant = 'primary',
+  style,
+  textStyle,
+  foregroundColor,
 }: {
   label: string;
   onPress: () => void;
@@ -21,8 +25,11 @@ export function PrimaryButton({
   loading?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'coral';
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  foregroundColor?: string;
 }) {
-  const foreground = variant === 'secondary' ? COLORS.forest : COLORS.white;
+  const foreground = foregroundColor ?? (variant === 'secondary' ? COLORS.forest : COLORS.white);
   return (
     <Pressable
       accessibilityRole="button"
@@ -33,12 +40,13 @@ export function PrimaryButton({
         styles.button,
         variant === 'secondary' && styles.secondary,
         variant === 'coral' && styles.coral,
+        style,
         (disabled || loading) && styles.disabled,
         pressed && styles.pressed,
       ]}
     >
       {loading ? <ActivityIndicator color={foreground} /> : <Ionicons name={icon} size={19} color={foreground} />}
-      <Text style={[styles.label, variant === 'secondary' && styles.secondaryLabel]}>{label}</Text>
+      <Text style={[styles.label, { color: foreground }, textStyle]}>{label}</Text>
     </Pressable>
   );
 }

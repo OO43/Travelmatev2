@@ -10,6 +10,15 @@
     "plugins": [
       "expo-router",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow TravelMate to use your location to set the starting point for a journey.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "Allow TravelMate to scan tickets and travel barcodes."

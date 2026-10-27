@@ -40,7 +40,7 @@ export function SelectField({ label, value, options, onChange, icon = 'chevron-d
 }
 const styles = StyleSheet.create({
   wrap: { gap: 8 }, label: { color: COLORS.ink, fontSize: 14, fontWeight: '800' },
-  trigger: {  borderWidth: 3, borderColor: COLORS.cream, borderRadius: RADIUS.sm, borderBottomColor: COLORS.forestLight, borderRadius: RADIUS.s,
+  trigger: {  borderWidth: 3, borderColor: COLORS.cream, borderRadius: RADIUS.sm, borderBottomColor: COLORS.forestLight, 
     flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16, minHeight: 15 },
   value: { color: COLORS.ink, fontSize: 16, flex: 1 },
   modal: { flex: 1, padding: SPACING.lg, backgroundColor: COLORS.cream },

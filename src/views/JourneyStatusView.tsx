@@ -5,6 +5,9 @@ import { AppHeader } from '@/components/AppHeader';
 import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenContainer } from '@/components/ScreenContainer';
+import { JourneyDisruptions, JourneyRouteDetails, JourneyRouteSummary } from '@/components/JourneyRouteDetails';
+import { JourneyMap } from '@/components/JourneyMap';
+import { JourneyLiveUpdates } from '@/components/JourneyLiveUpdates';
 import type { Journey } from '@/models/journey';
 import type { JourneySession } from '@/models/journeySession';
 import { COLORS, RADIUS, SPACING } from '@/theme';
@@ -100,7 +103,7 @@ export function JourneyStatusView({
         <Card style={styles.hero}>
           <View style={styles.heroTop}>
             <View style={styles.icon}>
-              <Ionicons name={icon} size={27} color={COLORS.white} />
+              <Ionicons name={icon} size={28} color={COLORS.white} />
             </View>
 
             <View style={styles.flex}>
@@ -131,10 +134,13 @@ export function JourneyStatusView({
         </Card>
       ) : null}
 
+      {journey ? <JourneyLiveUpdates key={`live-${journey.id}`} journey={journey} /> : null}
+      {journey ? <JourneyMap key={journey.id} journey={journey} /> : null}
       {journey?.source === 'tfl' ? <Card>
         <Text style={styles.emptyTitle}>Transport for London route</Text>
         <Text style={styles.emptyBody}>Times are London local time. This is a planned route, not live vehicle tracking. Saving a session does not book staff assistance or activate stop reminders.</Text>
-        {journey.warnings?.map((warning, index) => <Text key={index} style={styles.emptyBody}>{warning}</Text>)}
+        <JourneyRouteSummary journey={journey} />
+        <JourneyDisruptions journey={journey} />
       </Card> : null}
 
       {journeySession ? (
@@ -200,7 +206,7 @@ export function JourneyStatusView({
         <View style={styles.section}>
           <Text style={styles.eyebrow}>JOURNEY TIMELINE</Text>
 
-          {journey.timeline.map((item, index) => (
+          {journey.source === 'tfl' && journey.legs?.length ? <JourneyRouteDetails journey={journey} /> : journey.timeline.map((item, index) => (
             <View key={item.id} style={styles.timelineRow}>
               <View style={styles.timelineMarker}>
                 <View
@@ -256,7 +262,7 @@ export function JourneyStatusView({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
   hero: {
     backgroundColor: COLORS.forestDeep,
     borderColor: COLORS.forestDeep,
@@ -264,10 +270,12 @@ const styles = StyleSheet.create({
   },
   heroTop: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 12,
   },
   icon: {
+    flexShrink: 0,
     width: 50,
     height: 50,
     borderRadius: 17,
@@ -286,6 +294,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   status: {
+    flexShrink: 0,
     color: '#FFD09F',
     fontSize: 12,
     fontWeight: '900',
@@ -295,7 +304,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 19,
     lineHeight: 26,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   times: {
     flexDirection: 'row',
@@ -305,7 +314,7 @@ const styles = StyleSheet.create({
   time: {
     color: COLORS.white,
     fontSize: 21,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   timeLine: {
     flex: 1,

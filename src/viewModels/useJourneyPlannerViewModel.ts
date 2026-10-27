@@ -1,9 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Linking, Platform } from 'react-native';
 import type { Journey, LocationOption, TransportMode } from '@/models/journey';
 import { JourneyPlanningError, planJourneyOptions } from '@/services/journeyService';
 import type { LocationChoices } from '@/services/journeyService';
 import { useTravelmateStore } from '@/state/TravelmateStore';
 import { createJourneySession, supportOptionsFromProfile } from '@/services/journeySessionService';
+import { placeToJourneyLocation } from '@/services/placeService';
+import type { ResolvedPlace } from '@/services/placeService';
+import { DeviceLocationError, getDeviceOrigin } from '@/services/deviceLocationService';
 
 function localDate() {
   const now = new Date();
@@ -13,8 +17,8 @@ export function useJourneyPlannerViewModel(initialMode: TransportMode, initialDe
   const [mode, setModeValue] = useState<TransportMode>(initialMode);
   const { latestTicket, setCurrentJourney, profile, rememberSession, dismissTicketBanner } = useTravelmateStore();
   const ticketMatches = latestTicket?.mode === mode;
-  const [origin, setOriginValue] = useState(ticketMatches ? latestTicket.plannerInput.origin : 'Current location');
-  const [destination, setDestinationValue] = useState(initialDestination || (ticketMatches ? latestTicket.plannerInput.destination : ''));
+  const [origin, setOriginValue] = useState('');
+  const [destination, setDestinationValue] = useState(initialDestination);
   const [departureDate, setDateValue] = useState(localDate);
   const [departureTime, setTimeValue] = useState('14:30');
   const [useAccessibilityPreferences, setPreferencesValue] = useState(true);
@@ -29,8 +33,18 @@ export function useJourneyPlannerViewModel(initialMode: TransportMode, initialDe
   const requestVersion = useRef(0);
   const confirming = useRef(false);
   const planning = useRef(false);
+  const deviceRequest = useRef<AbortController | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState('');
+  const [canOpenLocationSettings, setCanOpenLocationSettings] = useState(false);
+  useEffect(() => () => { deviceRequest.current?.abort(); deviceRequest.current = null; }, []);
 
-  function invalidate() { requestVersion.current += 1; setRoutes([]); setResult(null); setError(''); setLocationChoices({ origin: [], destination: [] }); }
+  function stopLocating() {
+    deviceRequest.current?.abort(); deviceRequest.current = null;
+    setIsLocating(false); setLocationMessage(''); setCanOpenLocationSettings(false);
+  }
+
+  function invalidate() { stopLocating(); requestVersion.current += 1; setRoutes([]); setResult(null); setError(''); setLocationChoices({ origin: [], destination: [] }); }
   function setMode(value: TransportMode) {
     if (confirming.current || value === mode) return;
     setModeValue(value);
@@ -39,18 +53,53 @@ export function useJourneyPlannerViewModel(initialMode: TransportMode, initialDe
   function setOrigin(value: string) { selectedOrigin.current = null; setOriginValue(value); invalidate(); }
   function setDestination(value: string) { selectedDestination.current = null; setDestinationValue(value); invalidate(); }
   function chooseLocation(field: 'origin' | 'destination', option: LocationOption) {
+    stopLocating();
     requestVersion.current += 1; setRoutes([]); setResult(null); setError('');
     if (field === 'origin') { selectedOrigin.current = option; setOriginValue(option.name); }
     else { selectedDestination.current = option; setDestinationValue(option.name); }
     setLocationChoices(current => ({ ...current, [field]: [] }));
+  }
+  function choosePlace(field: 'origin' | 'destination', place: ResolvedPlace, userQuery: string, displayLabel: string) {
+    if (confirming.current) return;
+    chooseLocation(field, placeToJourneyLocation(place, userQuery));
+    // Display provider content only in this mounted planner, never in persistent app state.
+    if (field === 'origin') setOriginValue(displayLabel);
+    else setDestinationValue(displayLabel);
   }
   function setDepartureDate(value: string) { setDateValue(value); invalidate(); }
   function setDepartureTime(value: string) { setTimeValue(value); invalidate(); }
   function setUseAccessibilityPreferences(value: boolean) { setPreferencesValue(value); invalidate(); }
   function selectJourney(journey: Journey) { setResult(journey); setError(''); }
 
+  async function locateOrigin() {
+    if (deviceRequest.current || planning.current || confirming.current) return;
+    invalidate();
+    const controller = new AbortController(); deviceRequest.current = controller;
+    setIsLocating(true); setLocationMessage('Finding your starting point…');
+    try {
+      const detected = await getDeviceOrigin(controller.signal);
+      if (controller.signal.aborted || deviceRequest.current !== controller) return;
+      chooseLocation('origin', detected.location);
+      setLocationMessage(detected.message);
+    } catch (error) {
+      if (controller.signal.aborted || deviceRequest.current !== controller) return;
+      setLocationMessage(error instanceof Error ? error.message : 'Unable to find your location. Enter your starting point manually.');
+      setCanOpenLocationSettings(error instanceof DeviceLocationError && error.canOpenSettings);
+    } finally {
+      if (deviceRequest.current === controller) { deviceRequest.current = null; setIsLocating(false); }
+    }
+  }
+  async function openLocationSettings() {
+    if (Platform.OS === 'web') {
+      setLocationMessage('Use your browser site settings to allow location, then try again. Location on the web requires HTTPS or localhost.');
+      return;
+    }
+    try { await Linking.openSettings(); }
+    catch { setLocationMessage('Open device Settings to allow location for TravelMate, then try again.'); }
+  }
+
   async function findJourney() {
-    if (planning.current || confirming.current) return null;
+    if (planning.current || confirming.current || deviceRequest.current) return null;
     if (!origin.trim() || !destination.trim()) { setError('Enter both your starting point and destination.'); return null; }
     const version = ++requestVersion.current;
     planning.current = true;
@@ -106,7 +155,8 @@ export function useJourneyPlannerViewModel(initialMode: TransportMode, initialDe
     } finally { confirming.current = false; setIsConfirming(false); }
   }
   return { mode, origin, destination, departureDate, departureTime, useAccessibilityPreferences,
-    isPlanning, isConfirming, error, result, routes, locationChoices, chooseLocation,
+    isLocating, locationMessage, canOpenLocationSettings, locateOrigin, stopLocating, openLocationSettings,
+    isPlanning, isConfirming, error, result, routes, locationChoices, chooseLocation, choosePlace,
     ticket: ticketMatches ? latestTicket : null,
     setMode, setOrigin, setDestination, setDepartureDate, setDepartureTime, setUseAccessibilityPreferences,
     selectJourney, confirmJourney, findJourney };

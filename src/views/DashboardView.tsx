@@ -52,7 +52,7 @@ export function DashboardView({
 }) {
   return (
     <ScreenContainer header={<AppHeader title={`Hello, ${passengerName}`} subtitle="Where are you travelling today?" onProfile={onOpenProfile} onAlerts={onAlerts} unreadCount={unreadCount} />}>
-      <PrimaryButton label="Get help / request assistance" icon="hand-left" onPress={onAssistance} variant="secondary" />
+      <PrimaryButton style={styles.assistanceButton} label="Get help / request assistance" icon="hand-left" onPress={onAssistance} variant="secondary" />
       <Card style={styles.scannerCard}>
         <View style={styles.scannerIcon}><Ionicons name="scan" size={28} color={COLORS.white} /></View>
         <View style={styles.flex}>
@@ -106,7 +106,7 @@ export function DashboardView({
               <View style={styles.modePill}><Ionicons name={currentJourney.mode === 'flight' ? 'airplane' : currentJourney.mode === 'train' ? 'train' : 'bus'} size={16} color={COLORS.white} /><Text style={styles.modeText}>{currentJourney.provider} {currentJourney.serviceNumber}</Text></View>
               <Text style={styles.status}>{currentJourney.status.replace('_', ' ').toUpperCase()}</Text>
             </View>
-            <Text style={styles.route}>{currentJourney.origin} → {currentJourney.destination}</Text>
+            <Text style={styles.route}>{currentJourney.origin}  →  {currentJourney.destination}</Text>
             <Text style={styles.routeMeta}>{currentJourney.departureTime} · {currentJourney.durationMinutes} minutes</Text>
             <PrimaryButton label="View journey status" icon="navigate" onPress={onOpenJourney} />
           </Card>
@@ -119,7 +119,7 @@ export function DashboardView({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 }, section: { gap: SPACING.md,},
+  flex: { flex: 1 }, section: { gap: SPACING.md, padding: 1},
   scannerCard: { backgroundColor: COLORS.forestDeep, borderColor: COLORS.forestDeep, gap: SPACING.md },
   scannerIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
   scannerKicker: { color: '#9DD4C7', ...TYPOGRAPHY.eyebrow },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   ticketNotice: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.forestSoft, padding: 12, borderRadius: RADIUS.sm },
   ticketNoticeText: { color: COLORS.forest, flex: 1, fontWeight: '700', fontSize: 12 },
   dismissTicket: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  eyebrow: { color: COLORS.forest, ...TYPOGRAPHY.eyebrow, letterSpacing: 1.3 },
+  eyebrow: { color: COLORS.forest, ...TYPOGRAPHY.eyebrow, letterSpacing: 1.3, fontSize: 12 },
   sectionTitle: { color: COLORS.ink, ...TYPOGRAPHY.sectionTitle, marginTop: 3 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   actionCard: { width: '48%', minHeight: 172, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.surface, padding: 14, gap: 9 },
@@ -137,9 +137,12 @@ const styles = StyleSheet.create({
   actionDetail: { color: COLORS.inkSoft, ...TYPOGRAPHY.caption, flex: 1 },
   disabled: { opacity: 0.58 }, pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
   soon: { color: COLORS.coral, fontSize: 9, fontWeight: '900', letterSpacing: 1 },
-  journeyCard: { gap: SPACING.md }, rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  modePill: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: COLORS.forest, borderRadius: RADIUS.pill, paddingHorizontal: 11, paddingVertical: 7 },
-  modeText: { color: COLORS.white, fontWeight: '800', fontSize: 11 }, status: { color: COLORS.coral, fontSize: 10, fontWeight: '900' },
-  route: { color: COLORS.ink, fontSize: 18, lineHeight: 25, fontWeight: '900' }, routeMeta: { color: COLORS.inkSoft, fontSize: 13 },
+  journeyCard: { gap: SPACING.md, paddingBottom: 15, paddingRight: 10 }, 
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 7 },
+  modePill: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: COLORS.forest, borderRadius: RADIUS.pill, paddingHorizontal: 6, paddingVertical: 7 },
+  modeText: { flex: 1, minWidth: 0, flexShrink: 1, color: COLORS.white, fontWeight: '800', fontSize: 11 },
+  status: { flexShrink: 0, paddingVertical: 7, color: COLORS.coral, fontSize: 11, fontWeight: '900', lineHeight: 12, },
+  route: { color: COLORS.ink, fontSize: 18, lineHeight: 25, fontWeight: '900' }, routeMeta: { color: COLORS.inkSoft, fontSize: 15, fontWeight: 900 },
   empty: { color: COLORS.inkSoft, ...TYPOGRAPHY.body },
+  assistanceButton: { marginBottom: SPACING.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.forestLight },
 });

@@ -48,5 +48,4 @@ export function JourneysView({ upcoming, history, savedPlaces, latestTicket, arc
 }
 const styles = StyleSheet.create({ title: { fontSize: 22, fontWeight: '800', color: COLORS.ink },
   route: { fontSize: 18, lineHeight: 26, fontWeight: '800', color: COLORS.ink },
-  body: { fontSize: 14, lineHeight: 22, color: COLORS.inkSoft, marginTop: 6 }, gap: { marginTop: 12 } });
-
+  body: { fontSize: 14, lineHeight: 22, color: COLORS.inkSoft, marginTop: 6 }, gap: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: 'transparent' } });

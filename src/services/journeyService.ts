@@ -13,6 +13,13 @@ type TflRoute = {
 };
 type TflResponse = { source: 'tfl'; fetched_at: string; journeys: TflRoute[] };
 
+function providerLocationName(location: string, name?: string) {
+  // Coordinate searches must let TfL resolve its own names. Google search text
+  // may be only "Vic" or "Wool" and must not become the saved endpoint label.
+  const coordinate = /^\s*[+-]?\d+(?:\.\d+)?\s*,\s*[+-]?\d+(?:\.\d+)?\s*$/.test(location);
+  return coordinate ? undefined : name;
+}
+
 export function mapTflJourney(route: TflRoute, fetchedAt: string, input: JourneyPlannerInput): Journey {
   // The API returns Europe/London timestamps. Preserve London date/time even when the phone uses a different timezone.
   return {
@@ -62,7 +69,8 @@ export async function planJourneyOptions(input: JourneyPlannerInput): Promise<Jo
     const response = await fetch(`${baseUrl}/api/v1/journeys/plan`, {
       method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, signal: controller.signal,
       body: JSON.stringify({ origin: input.origin, destination: input.destination,
-        origin_name: input.originName, destination_name: input.destinationName, mode: input.mode,
+        origin_name: providerLocationName(input.origin, input.originName),
+        destination_name: providerLocationName(input.destination, input.destinationName), mode: input.mode,
         departure_date: input.departureDate, departure_time: input.departureTime,
         step_free: Boolean(input.useAccessibilityPreferences && input.stepFree),
         extra_transfer_time: Boolean(input.useAccessibilityPreferences && input.extraTransferTime) }),
