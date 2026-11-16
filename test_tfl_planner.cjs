@@ -50,7 +50,7 @@ test('upstream failures never silently return mock routes', async () => {
 test('unsupported modes and unresolved current location fail before making a request', async () => {
   let called = false; const api = service(async () => { called = true; });
   await assert.rejects(api.planJourneyOptions({ ...input, mode: 'flight' }), /another provider/);
-  await assert.rejects(api.planJourneyOptions({ ...input, origin: 'Current location' }), /Device location/);
+  await assert.rejects(api.planJourneyOptions({ ...input, origin: 'Current location' }), /Use current location/);
   assert.equal(called, false);
 });
 test('demo results require an explicit demo provider setting', async () => {

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText as Text } from '@/components/AppText';
@@ -6,25 +5,13 @@ import { PrimaryButton, ScreenContainer } from '@/components/ui';
 import { JourneyRouteCard } from '@/components/JourneyRouteCard';
 import { JourneyMap } from '@/components/JourneyMap';
 import { SelectField } from '@/components/SelectField';
+import { JourneyDeparturePicker } from '@/components/JourneyDeparturePicker';
 import { PlaceAutocompleteField } from '@/components/PlaceAutocompleteField';
 import type { ResolvedPlace } from '@/services/placeService';
 import { COLORS } from '@/theme';
 import type { Journey, LocationOption, TransportMode } from '@/models/journey';
 import type { LocationChoices } from '@/services/journeyService';
 import type { TicketIntelligenceResult } from '@/models/ticket';
-
-function dateChoices(start: string) {
-  const date = new Date(start + 'T12:00:00');
-  return Array.from({ length: 90 }, (_, index) => {
-    const day = new Date(date); day.setDate(day.getDate() + index);
-    const value = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
-    return { value, label: String(day.getDate()).padStart(2, '0') + '/' + String(day.getMonth() + 1).padStart(2, '0') + '/' + day.getFullYear() };
-  });
-}
-const timeChoices = Array.from({ length: 96 }, (_, index) => {
-  const value = String(Math.floor(index / 4)).padStart(2, '0') + ':' + String((index % 4) * 15).padStart(2, '0');
-  return { value, label: value };
-});
 
 export function JourneyPlannerView({ mode, origin, destination, departureDate, departureTime, useAccessibilityPreferences,
   isPlanning, isConfirming, error, result, routes, ticket, onOriginChange, onDestinationChange,
@@ -44,7 +31,6 @@ export function JourneyPlannerView({ mode, origin, destination, departureDate, d
   isLocating: boolean; locationMessage: string; canOpenLocationSettings: boolean;
   locateOrigin: () => Promise<void>; stopLocating: () => void; openLocationSettings: () => Promise<void>;
 }) {
-  const [dates] = useState(() => dateChoices(departureDate));
   return <ScreenContainer backgroundColor={COLORS.cream}>
     <View style={styles.headingRow}>
       <View style={styles.flex}><Text style={styles.kicker}>NEW JOURNEY</Text>
@@ -59,7 +45,9 @@ export function JourneyPlannerView({ mode, origin, destination, departureDate, d
       onChange={value => onModeChange(value as TransportMode)} />
     <Text style={styles.note}>{process.env.EXPO_PUBLIC_JOURNEY_PROVIDER === 'demo'
       ? 'Demo planner: sample routes for testing.'
-      : 'London routes powered by TfL. Enter a station, bus stop or postcode. Times are London local time.'}</Text>
+      : process.env.EXPO_PUBLIC_JOURNEY_PROVIDER === 'transportapi'
+        ? 'Routes powered by TransportAPI. Select locations or enter full postcodes. Coverage depends on the configured engine. Times are UK local time.'
+        : 'London routes powered by TfL. Enter a station, bus stop or postcode. Times are London local time.'}</Text>
     <View style={styles.locations}>
       <PlaceAutocompleteField label="From" value={origin} onChange={onOriginChange} disabled={isConfirming}
         onSelect={(place, query, name) => choosePlace('origin', place, query, name)} />
@@ -85,8 +73,8 @@ export function JourneyPlannerView({ mode, origin, destination, departureDate, d
         <Text style={styles.routeText}>{option.name}</Text>
       </Pressable>)}
     </View> : null)}
-    <SelectField label="Date" icon="calendar-outline" value={departureDate} options={dates} onChange={onDateChange} disabled={isConfirming} />
-    <SelectField label="Leave at" icon="time-outline" value={departureTime} options={timeChoices} onChange={onTimeChange} disabled={isConfirming} />
+    <JourneyDeparturePicker date={departureDate} time={departureTime} disabled={isConfirming}
+      onDateChange={onDateChange} onTimeChange={onTimeChange} />
     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: useAccessibilityPreferences, disabled: isConfirming }}
       disabled={isConfirming} onPress={() => onPreferencesChange(!useAccessibilityPreferences)} style={styles.preferences}>
       <Ionicons name={useAccessibilityPreferences ? 'checkbox' : 'square-outline'} size={25} color="#144F85" />
@@ -98,8 +86,8 @@ export function JourneyPlannerView({ mode, origin, destination, departureDate, d
       disabled={isConfirming || isLocating} onPress={onFind} />
     {routes.length ? <>
       <Text style={styles.kicker}>{routes.length} ROUTES FOUND</Text>
-      <View style={styles.resultsHeading}><Text style={styles.resultHeading}>{routes[0]?.source === 'tfl' ? 'TfL route options' : 'Recommended for you'}</Text><Text style={styles.note}>{routes[0]?.source === 'tfl' ? 'Transport for London' : 'Preview results'}</Text></View>
-      <Text style={styles.note}>{routes[0]?.source === 'tfl' ? 'TfL journey data. Fares, where supplied, are estimates. Confirm accessibility with the operator; assistance and automatic tracking are not connected.' : 'Sample routes, times and fares for testing.'}</Text>
+      <View style={styles.resultsHeading}><Text style={styles.resultHeading}>{routes[0]?.source === 'transportapi' ? 'TransportAPI route options' : routes[0]?.source === 'tfl' ? 'TfL route options' : 'Recommended for you'}</Text><Text style={styles.note}>{routes[0]?.source === 'transportapi' ? 'TransportAPI' : routes[0]?.source === 'tfl' ? 'Transport for London' : 'Preview results'}</Text></View>
+      <Text style={styles.note}>{routes[0]?.source === 'transportapi' ? 'TransportAPI journey data. Step-free access is not verified; review journey notices. Staff assistance and vehicle tracking are not connected.' : routes[0]?.source === 'tfl' ? 'TfL journey data. Fares, where supplied, are estimates. Confirm accessibility with the operator; assistance and automatic tracking are not connected.' : 'Sample routes, times and fares for testing.'}</Text>
       {routes.map(route => <JourneyRouteCard key={route.id} journey={route}
         selected={result?.id === route.id} disabled={isConfirming} searchDate={departureDate}
         onSelect={() => onSelectRoute(route)} />)}

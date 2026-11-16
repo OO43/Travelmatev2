@@ -3,10 +3,12 @@ import { Tabs } from 'expo-router';
 
 import { COLORS } from '@/theme';
 
+export const unstable_settings = { anchor: 'dashboard' };
+
 export default function MainTabsLayout() {
   return (
     <Tabs
-      initialRouteName="dashboard"
+      backBehavior="initialRoute"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: COLORS.forest,
@@ -26,35 +28,35 @@ export default function MainTabsLayout() {
         options={{
           title: 'Home',
           tabBarAccessibilityLabel: 'TravelMate home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+          tabBarIcon: ({ focused, size }) => <Ionicons name="home" color={focused ? COLORS.forest : COLORS.inkSoft} size={size} />,
         }}
       />
       <Tabs.Screen
         name="journeys"
         options={{
           title: 'Journeys',
-          tabBarIcon: ({ color, size }) => <Ionicons name="map" color={color} size={size} />,
+          tabBarIcon: ({ focused, size }) => <Ionicons name="map" color={focused ? COLORS.forest : COLORS.inkSoft} size={size} />,
         }}
       />
       <Tabs.Screen
         name="accessibility"
         options={{
           title: 'Get help',
-          tabBarIcon: ({ color, size }) => <Ionicons name="hand-left" color={color} size={size} />,
+          tabBarIcon: ({ focused, size }) => <Ionicons name="hand-left" color={focused ? COLORS.forest : COLORS.inkSoft} size={size} />,
         }}
       />
       <Tabs.Screen
         name="alerts"
         options={{
           title: 'Alerts',
-          tabBarIcon: ({ color, size }) => <Ionicons name="notifications" color={color} size={size} />,
+          tabBarIcon: ({ focused, size }) => <Ionicons name="notifications" color={focused ? COLORS.forest : COLORS.inkSoft} size={size} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Account',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
+          tabBarIcon: ({ focused, size }) => <Ionicons name="person" color={focused ? COLORS.forest : COLORS.inkSoft} size={size} />,
         }}
       />
     </Tabs>

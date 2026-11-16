@@ -8,6 +8,7 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { JourneyDisruptions, JourneyRouteDetails, JourneyRouteSummary } from '@/components/JourneyRouteDetails';
 import { JourneyMap } from '@/components/JourneyMap';
 import { JourneyLiveUpdates } from '@/components/JourneyLiveUpdates';
+import { JourneyGuidance } from '@/components/JourneyGuidance';
 import type { Journey } from '@/models/journey';
 import type { JourneySession } from '@/models/journeySession';
 import { COLORS, RADIUS, SPACING } from '@/theme';
@@ -134,11 +135,15 @@ export function JourneyStatusView({
         </Card>
       ) : null}
 
+      {journey && (journey.source === 'tfl' || journey.source === 'transportapi') ? (
+        <JourneyGuidance key={journey.id + ":" + (journeySession?.session_id ?? "preview")} journey={journey}
+          confirmed={journeySession?.status === 'active' && journeySession.journey_id === journey.id} />
+      ) : null}
       {journey ? <JourneyLiveUpdates key={`live-${journey.id}`} journey={journey} /> : null}
       {journey ? <JourneyMap key={journey.id} journey={journey} /> : null}
-      {journey?.source === 'tfl' ? <Card>
-        <Text style={styles.emptyTitle}>Transport for London route</Text>
-        <Text style={styles.emptyBody}>Times are London local time. This is a planned route, not live vehicle tracking. Saving a session does not book staff assistance or activate stop reminders.</Text>
+      {journey?.source === 'tfl' || journey?.source === 'transportapi' ? <Card>
+        <Text style={styles.emptyTitle}>{journey.source === 'transportapi' ? 'TransportAPI route' : 'Transport for London route'}</Text>
+        <Text style={styles.emptyBody}>Times are London local time. This is a planned route, not live vehicle tracking. Start timetable reminders in Journey guidance. Saving a session does not book staff assistance.</Text>
         <JourneyRouteSummary journey={journey} />
         <JourneyDisruptions journey={journey} />
       </Card> : null}
@@ -151,7 +156,7 @@ export function JourneyStatusView({
               Status: {journeySession.status.toUpperCase()}
             </Text>
             <Text style={styles.emptyBody}>
-              {journeySession.vehicle_id.startsWith('planned-tfl-') ? 'Vehicle: not assigned' : 'Vehicle: ' + journeySession.vehicle_id}
+              {journeySession.vehicle_id.startsWith('planned-tfl-') || journeySession.vehicle_id.startsWith('planned-transportapi-') ? 'Vehicle: not assigned' : 'Vehicle: ' + journeySession.vehicle_id}
             </Text>
             <Text style={styles.emptyBody}>
               Support sharing:{' '}
@@ -206,7 +211,7 @@ export function JourneyStatusView({
         <View style={styles.section}>
           <Text style={styles.eyebrow}>JOURNEY TIMELINE</Text>
 
-          {journey.source === 'tfl' && journey.legs?.length ? <JourneyRouteDetails journey={journey} /> : journey.timeline.map((item, index) => (
+          {(journey.source === 'tfl' || journey.source === 'transportapi') && journey.legs?.length ? <JourneyRouteDetails journey={journey} /> : journey.timeline.map((item, index) => (
             <View key={item.id} style={styles.timelineRow}>
               <View style={styles.timelineMarker}>
                 <View

@@ -17,7 +17,7 @@ export function JourneyMap({ journey }: { journey: Journey }) {
   function fit() {
     if (data.points.length) map.current?.fitToCoordinates(data.points, { edgePadding: { top: 60, left: 55, right: 55, bottom: 60 }, animated: false });
   }
-  if (journey.source !== 'tfl') return null;
+  if (journey.source !== 'tfl' && journey.source !== 'transportapi') return null;
   return <Card>
     <Text accessibilityRole="header" style={styles.heading}>Route map</Text>
     <Text style={styles.body}>{region ? 'See walking sections, boarding stops and your destination.' : 'This saved journey has no map coordinates. Run a new search to load its map.'}</Text>
@@ -29,7 +29,7 @@ export function JourneyMap({ journey }: { journey: Journey }) {
           <Pressable accessibilityRole="button" accessibilityLabel="Close route map" onPress={() => setOpen(false)} style={styles.action}><Text style={styles.actionText}>Close</Text></Pressable></View>
         {open && region ? <MapView ref={map} style={styles.map} initialRegion={region} onMapReady={fit}
           showsUserLocation={false} showsMyLocationButton={false} toolbarEnabled={false} rotateEnabled={false}
-          accessibilityLabel="Planned TfL route map. The stop list below provides a text alternative.">
+          accessibilityLabel="Planned route map. The stop list below provides a text alternative.">
           {data.legs.filter(item => item.path.length).map(item => <Polyline key={item.index} coordinates={item.path}
             strokeColor={item.walking ? '#f0f3f9' : '#f50505'} strokeWidth={item.walking ? 4 : 6}
             lineDashPattern={item.walking ? [8, 6] : undefined} />)}
@@ -40,7 +40,7 @@ export function JourneyMap({ journey }: { journey: Journey }) {
           <View style={styles.legend}><Text style={styles.body}>━━ Transport</Text><Text style={styles.body}>┄┄ Walking</Text>
             <Pressable accessibilityRole="button" onPress={fit} style={styles.action}><Text style={styles.actionText}>Fit route</Text></Pressable></View>
           <Text style={styles.body}>{journey.origin} → {journey.destination}</Text>
-          <Text style={styles.caption}>Planned TfL route · {journey.departureTime}–{journey.arrivalTime} · {journey.durationMinutes} min</Text>
+          <Text style={styles.caption}>Planned {journey.source === 'transportapi' ? 'TransportAPI' : 'TfL'} route · {journey.departureTime}–{journey.arrivalTime} · {journey.durationMinutes} min</Text>
           {data.missingPaths ? <Text style={styles.caption}>{data.missingPaths} route section(s) have no supplied path. Gaps are left undrawn.</Text> : null}
           <Text style={styles.caption}>Map shows the planned route. Your moving position and live vehicles are not shown.</Text>
           {data.markers.map(marker => <Text key={marker.id} style={styles.body}>{marker.label}</Text>)}

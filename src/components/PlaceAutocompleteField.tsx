@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText as Text } from '@/components/AppText';
-import { autocompletePlaces, createPlaceSessionToken, resolvePlace } from '@/services/placeService';
+import { autocompletePlaces, createPlaceSessionToken, resolvePlace, usesMapboxSearch } from '@/services/placeService';
 import type { PlacePrediction, ResolvedPlace } from '@/services/placeService';
 import { COLORS } from '@/theme';
 
@@ -35,10 +35,11 @@ export function PlaceAutocompleteField({ label, value, disabled, onChange, onSel
     const version = generation.current;
     const aborter = new AbortController(); controller.current = aborter;
     const timer = setTimeout(() => {
+      if (version !== generation.current || aborter.signal.aborted) return;
       setIsLoading(true);
       void autocompletePlaces(picker.query.trim(), picker.token, aborter.signal).then(items => {
         if (version !== generation.current || aborter.signal.aborted) return;
-        setPredictions(items); setMessage(items.length ? '' : 'No suggestions found. Try a more specific London location or use manual entry.');
+        setPredictions(items); setMessage(items.length ? '' : 'No suggestions found. Try a more specific location or a full postcode.');
       }).catch(error => {
         if (version === generation.current && !aborter.signal.aborted) setMessage(error instanceof Error ? error.message : 'Place search is unavailable.');
       }).finally(() => {
@@ -82,7 +83,7 @@ export function PlaceAutocompleteField({ label, value, disabled, onChange, onSel
             <Pressable accessibilityRole="button" accessibilityLabel="Close place search" onPress={close} style={styles.close}><Ionicons name="close" size={25} color={COLORS.ink} /></Pressable></View>
           <TextInput accessibilityLabel={`Search ${label.toLowerCase()}`} placeholder="Address, station or postcode" placeholderTextColor={COLORS.inkSoft}
             value={picker?.query ?? ''} onChangeText={edit} editable={!resolving} autoCorrect={false} autoFocus maxLength={255} style={styles.input} />
-          <Text style={styles.hint}>London suggestions first. TfL journeys cover London.</Text>
+          <Text style={styles.hint}>{process.env.EXPO_PUBLIC_JOURNEY_PROVIDER === 'transportapi' ? 'Select a precise location. Journey coverage depends on the TransportAPI engine.' : 'London suggestions first. TfL journeys cover London.'}</Text>
           <View accessibilityLiveRegion="polite">{isLoading || resolving ? <View style={styles.loading}><ActivityIndicator color={COLORS.forest} /><Text style={styles.hint}>{resolving ? 'Selecting place…' : 'Searching places…'}</Text></View> : null}
             {message ? <Text style={styles.message}>{message}</Text> : null}
             {picker && picker.query.trim().length < 3 ? <Text style={styles.hint}>Type at least 3 characters to search.</Text> : null}</View>
@@ -91,14 +92,16 @@ export function PlaceAutocompleteField({ label, value, disabled, onChange, onSel
               accessibilityLabel={prediction.label} onPress={() => { void select(prediction); }} style={styles.result}>
               <Text style={styles.primary}>{prediction.primary_text}</Text><Text style={styles.secondary}>{prediction.secondary_text}</Text>
             </Pressable>)}
-            {predictions.length ? <Text style={styles.attribution}>Google Maps</Text> : null}
+            {predictions.length ? <Text style={styles.attribution}>{usesMapboxSearch() ? '© Mapbox' : 'Google Maps'}</Text> : null}
           </ScrollView>
           <Pressable accessibilityRole="button" disabled={!picker?.query.trim() || resolving} style={styles.manual}
             onPress={() => { if (picker) { onChange(picker.query.trim()); close(); } }}>
             <Text style={styles.manualText}>Use typed location without suggestions</Text>
           </Pressable>
-          <View style={styles.links}><Text style={styles.link} onPress={() => { void Linking.openURL('https://policies.google.com/privacy'); }}>Google privacy</Text>
-            <Text style={styles.link} onPress={() => { void Linking.openURL('https://maps.google.com/help/terms_maps/'); }}>Google Maps terms</Text></View>
+          {usesMapboxSearch() ? <View style={styles.links}>
+            <Text accessibilityRole="link" style={styles.link} onPress={() => { void Linking.openURL('https://www.mapbox.com/legal/privacy'); }}>Mapbox privacy</Text>
+          </View> : <View style={styles.links}><Text style={styles.link} onPress={() => { void Linking.openURL('https://policies.google.com/privacy'); }}>Google privacy</Text>
+            <Text style={styles.link} onPress={() => { void Linking.openURL('https://maps.google.com/help/terms_maps/'); }}>Google Maps terms</Text></View>}
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>

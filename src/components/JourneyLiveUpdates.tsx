@@ -9,13 +9,13 @@ import { COLORS } from '@/theme';
 
 export function JourneyLiveUpdates({ journey }: { journey: Journey }) {
   const live = useJourneyLiveUpdates(journey);
-  if (journey.source !== 'tfl') return null;
+  if (journey.source !== 'tfl' && journey.source !== 'transportapi') return null;
   if (!live.enabled) return <Card><Text style={styles.title}>Live updates</Text><Text style={styles.body}>No active transport legs with line identifiers are available. Plan a new journey to check current departures.</Text></Card>;
   return <Card>
-    <Text accessibilityRole="header" style={styles.title}>Live departures and service updates</Text>
+    <Text accessibilityRole="header" style={styles.title}>{journey.source === 'transportapi' ? 'TransportAPI bus departures' : 'Live departures and service updates'}</Text>
     <Text style={styles.caption}>Predictions are for now at each boarding stop, across all supplied destinations and platforms. Check the direction before boarding. They do not change your planned itinerary.</Text>
     {live.error ? <Text accessibilityLiveRegion="polite" style={styles.warning}>{live.error}{live.data ? ' Previous data is marked outdated.' : ''}</Text> : null}
-    {!live.data && live.isRefreshing ? <Text accessibilityLiveRegion="polite" style={styles.body}>Loading TfL updates…</Text> : null}
+    {!live.data && live.isRefreshing ? <Text accessibilityLiveRegion="polite" style={styles.body}>Loading transport updates…</Text> : null}
     {live.data?.legs.map(board => {
       const leg = journey.legs?.[board.leg_index];
       const stale = isOutdated(board.fetched_at, live.now, Boolean(live.error) || board.state !== 'ok');
@@ -50,7 +50,7 @@ export function JourneyLiveUpdates({ journey }: { journey: Journey }) {
       </View>;
     })}
     <PrimaryButton label="Refresh live updates" icon="refresh" variant="secondary" loading={live.isRefreshing} onPress={live.refresh} />
-    <Text style={styles.caption}>TfL · Refreshes every minute while this screen is active. No vehicle has been assigned by these predictions.</Text>
+    <Text style={styles.caption}>{journey.source === 'transportapi' ? 'TransportAPI · Refreshes on opening, returning to this screen or tapping Refresh. No automatic minute-by-minute polling. Rail departures, service-status feeds and vehicle tracking are not connected.' : 'TfL · Refreshes every minute while this screen is active. No vehicle has been assigned by these predictions.'}</Text>
   </Card>;
 }
 const styles = StyleSheet.create({

@@ -63,7 +63,7 @@ test('malformed predictions and API errors are rejected', async () => {
 });
 
 // Lifecycle harness: exercises focus, backgrounding and late responses without a device.
-function harness(fetcher) {
+function harness(fetcher, selectedJourney = journey) {
   const cells = []; let cursor = 0, cleanup, focusCallback, appListener;
   const intervals = [], startup = [], runner = { value: null };
   const native = { AppState: { currentState: 'active', addEventListener: (_, callback) => { appListener = callback; return { remove() { appListener = null; } }; } } };
@@ -81,7 +81,7 @@ function harness(fetcher) {
     setTimeout: fn => { startup.push(fn); return fn; }, clearTimeout: () => {},
     setInterval: (fn, ms) => { const item = { fn, ms, cleared: false }; intervals.push(item); return item; }, clearInterval: item => { item.cleared = true; } };
   vm.runInNewContext(compiled('src/viewModels/useJourneyLiveUpdates.ts'), context);
-  return { render() { cursor = 0; return context.exports.useJourneyLiveUpdates(journey); },
+  return { render() { cursor = 0; return context.exports.useJourneyLiveUpdates(selectedJourney); },
     focus() { cleanup = focusCallback(); startup.splice(0).forEach(fn => fn()); }, blur() { cleanup?.(); },
     state(value) { native.AppState.currentState = value; appListener?.(value); },
     poll() { intervals.filter(item => item.ms === 60000 && !item.cleared).forEach(item => item.fn()); },
@@ -108,4 +108,14 @@ test('a blurred screen discards a late response', async () => {
   const app = harness(() => new Promise(resolve => { complete = resolve; }));
   app.render(); app.focus(); app.blur(); complete(snapshot()); await flush();
   assert.equal(app.render().data, null);
+});
+
+test('TransportAPI refreshes explicitly without a minute polling interval', async () => {
+  let calls = 0;
+  const app = harness(async () => { calls++; return { ...snapshot(), source: 'transportapi' }; },
+    { ...journey, source: 'transportapi' });
+  app.render(); app.focus(); await flush(); app.poll(); assert.equal(calls, 1);
+  assert.ok(app.intervals.every(item => item.ms !== 60000));
+  app.render().refresh(); await flush(); assert.equal(calls, 2);
+  app.blur();
 });

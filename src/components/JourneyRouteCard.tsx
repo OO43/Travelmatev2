@@ -12,7 +12,7 @@ export function JourneyRouteCard({ journey, selected, disabled, searchDate, onSe
   journey: Journey; selected: boolean; disabled: boolean; searchDate: string; onSelect: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const detailed = journey.source === 'tfl' && Boolean(journey.legs?.length);
+  const detailed = (journey.source === 'tfl' || journey.source === 'transportapi') && Boolean(journey.legs?.length);
   const icon = journey.mode === 'flight' ? 'airplane-outline' : journey.mode === 'train' ? 'train-outline' : journey.mode === 'car' ? 'car-outline' : 'bus-outline';
   const notices = journeyWarnings(journey);
   const summary = journeySummary(journey);
@@ -26,7 +26,7 @@ export function JourneyRouteCard({ journey, selected, disabled, searchDate, onSe
       {journey.arrivalDate && journey.arrivalDate !== journey.departureDate ? <Text style={styles.body}>Arrives {journey.arrivalDate}</Text> : null}
       <View style={styles.serviceRow}><Ionicons name={icon} size={22} color={COLORS.forest} /><Text style={styles.service}>{journey.serviceNumber}</Text></View>
       <Text style={styles.body}>{journey.origin} → {journey.destination}</Text>
-      <Text style={styles.price}>{journey.price ?? 'Fare unavailable'}{detailed && journey.price !== 'Fare unavailable' ? ' · TfL estimate' : ''}</Text>
+      <Text style={styles.price}>{journey.price ?? 'Fare unavailable'}{detailed && journey.price !== 'Fare unavailable' ? ' · provider estimate' : ''}</Text>
       {detailed ? <JourneyRouteSummary journey={journey} /> : null}
       {journey.accessibilityFeatures.map((feature, index) => <Text key={index} style={styles.preference}>{feature}</Text>)}
       {notices.length ? <Text style={styles.notice}>{notices.length} journey {notices.length === 1 ? 'notice' : 'notices'} · open steps to review</Text> : null}

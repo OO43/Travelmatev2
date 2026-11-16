@@ -4,6 +4,10 @@ export type ResolvedPlace = {
   attributions: { provider: string; uri?: string | null }[];
 };
 
+export function usesMapboxSearch() {
+  return process.env.EXPO_PUBLIC_PLACE_SEARCH_PROVIDER === 'mapbox';
+}
+
 // Unique per picker opening; suggestions and the selected place share this token.
 export function createPlaceSessionToken() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, char => {
@@ -21,7 +25,7 @@ async function request(path: string, body: object, signal?: AbortSignal): Promis
   if (signal?.aborted) controller.abort();
   const timeout = setTimeout(abort, 12000);
   try {
-    const response = await fetch(`${baseUrl}/api/v1/places/${path}`, {
+    const response = await fetch(`${baseUrl}/api/v1/places/${usesMapboxSearch() ? 'mapbox/' : ''}${path}`, {
       method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify(body), signal: controller.signal,
     });
@@ -42,7 +46,8 @@ async function request(path: string, body: object, signal?: AbortSignal): Promis
 }
 
 export async function autocompletePlaces(input: string, sessionToken: string, signal?: AbortSignal): Promise<PlacePrediction[]> {
-  const data = await request('autocomplete', { input, session_token: sessionToken }, signal) as { suggestions?: unknown } | null;
+  const data = await request('autocomplete', { input, session_token: sessionToken,
+    ...(process.env.EXPO_PUBLIC_JOURNEY_PROVIDER === 'transportapi' ? { london_bias: false } : {}) }, signal) as { suggestions?: unknown } | null;
   if (!Array.isArray(data?.suggestions) || !data.suggestions.every(item => item
     && typeof item.place_id === 'string' && typeof item.label === 'string'
     && typeof item.primary_text === 'string' && typeof item.secondary_text === 'string')) {
@@ -61,6 +66,6 @@ export async function resolvePlace(placeId: string, sessionToken: string, signal
 }
 
 export function placeToJourneyLocation(place: ResolvedPlace, userQuery: string) {
-  // Only the user's typed text goes into saved journey labels, not Google prediction content.
+  // Only the user's typed text goes into saved journey labels, not provider prediction content.
   return { id: `${place.latitude},${place.longitude}`, name: userQuery.trim().slice(0, 255) };
 }

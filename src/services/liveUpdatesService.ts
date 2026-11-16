@@ -3,10 +3,11 @@ import type { ArrivalPrediction, LiveUpdates, LiveUpdatesRequest } from '@/model
 import { isWalkingLeg } from '@/services/journeyDisplay';
 
 export function liveRequestForJourney(journey: Journey): LiveUpdatesRequest | null {
-  if (journey.source !== 'tfl' || journey.status === 'completed' || journey.status === 'arrived') return null;
+  if ((journey.source !== 'tfl' && journey.source !== 'transportapi') || journey.status === 'completed' || journey.status === 'arrived') return null;
   const legs = (journey.legs ?? []).flatMap((leg, index) => !isWalkingLeg(leg) && leg.line_id
-    ? [{ leg_index: index, line_id: leg.line_id, stop_id: leg.departure_stop_id ?? null }] : []).slice(0, 6);
-  return legs.length ? { legs } : null;
+    ? [{ leg_index: index, line_id: leg.line_id, stop_id: leg.departure_stop_id ?? null,
+      ...(journey.source === 'transportapi' ? { mode: leg.mode, service_name: leg.line_name ?? undefined } : {}) }] : []).slice(0, 6);
+  return legs.length ? { ...(journey.source === 'transportapi' ? { provider: 'transportapi' as const } : {}), legs } : null;
 }
 
 export function isOutdated(fetchedAt: string | null, now: number, failed = false) {
@@ -24,6 +25,7 @@ export function predictionIsOutdated(row: ArrivalPrediction, now: number, sectio
 }
 
 export function mergeLiveUpdates(previous: LiveUpdates | null, next: LiveUpdates): LiveUpdates {
+  if (previous?.source !== next.source) previous = null;
   return { ...next,
     legs: next.legs.map(leg => {
       const old = previous?.legs.find(item => item.leg_index === leg.leg_index && item.line_id === leg.line_id && item.stop_id === leg.stop_id);
@@ -41,7 +43,7 @@ function validUpdates(value: unknown): value is LiveUpdates {
   const data = value as LiveUpdates;
   const date = (s: unknown) => typeof s === 'string' && Number.isFinite(Date.parse(s));
   const text = (s: unknown) => s === null || typeof s === 'string';
-  return data.source === 'tfl' && date(data.received_at) && Array.isArray(data.legs) && Array.isArray(data.lines)
+  return ['tfl', 'transportapi'].includes(data.source) && date(data.received_at) && Array.isArray(data.legs) && Array.isArray(data.lines)
     && data.legs.every(leg => leg && Number.isInteger(leg.leg_index) && typeof leg.line_id === 'string'
       && text(leg.stop_id) && text(leg.message)
       && ['ok', 'unavailable', 'unsupported'].includes(leg.state) && (leg.fetched_at === null || date(leg.fetched_at))
@@ -71,6 +73,7 @@ export async function getLiveUpdates(input: LiveUpdatesRequest, signal?: AbortSi
       throw new Error(typeof error?.message === 'string' ? error.message : `Live updates unavailable (${response.status}).`);
     }
     if (!validUpdates(data)) throw new Error('The live update response was not usable. Try again.');
+    if (data.source !== (input.provider ?? 'tfl')) throw new Error('The live update provider did not match this journey.');
     return data;
   } catch (error) {
     if (signal?.aborted) throw error;

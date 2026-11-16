@@ -40,15 +40,16 @@ export function useJourneyLiveUpdates(journey: Journey) {
     }
     runner.current = () => { void load(); };
     const initial = setTimeout(() => { void load(); }, 0);
-    const poll = setInterval(() => { void load(); }, 60000);
+    // TransportAPI trials can have small allowances: refresh explicitly, not every minute.
+    const poll = journey.source === 'transportapi' ? null : setInterval(() => { void load(); }, 60000);
     const clock = setInterval(() => { if (AppState.currentState === 'active') setNow(Date.now()); }, 15000);
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'active') { setNow(Date.now()); void load(); }
       else { controller?.abort(); controller = null; setNow(Date.now()); setResult(current => current?.key === key ? { ...current, refreshing: false } : current); }
     });
     return () => { active = false; runner.current = null; controller?.abort();
-      clearTimeout(initial); clearInterval(poll); clearInterval(clock); subscription.remove(); };
-  }, [requestJson, key]));
+      clearTimeout(initial); if (poll !== null) clearInterval(poll); clearInterval(clock); subscription.remove(); };
+  }, [requestJson, key, journey.source]));
 
   const current = result?.key === key ? result : null;
   return { enabled: Boolean(request), data: current?.data ?? null, error: current?.error ?? null,

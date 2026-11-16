@@ -6,12 +6,12 @@ export class JourneyPlanningError extends Error {
   constructor(message: string, readonly choices?: LocationChoices) { super(message); this.name = 'JourneyPlanningError'; }
 }
 type TflRoute = {
-  id: string; source: 'tfl'; mode: 'bus' | 'train'; provider: string; service_number: string;
+  id: string; source: 'tfl' | 'transportapi'; mode: 'bus' | 'train'; provider: string; service_number: string;
   origin: string; destination: string; departure_at: string; arrival_at: string;
   duration_minutes: number; changes: number; fare_pence: number | null;
   accessibility_features: string[]; warnings: string[]; legs: JourneyLeg[];
 };
-type TflResponse = { source: 'tfl'; fetched_at: string; journeys: TflRoute[] };
+type TflResponse = { source: 'tfl' | 'transportapi'; fetched_at: string; journeys: TflRoute[] };
 
 function providerLocationName(location: string, name?: string) {
   // Coordinate searches must let TfL resolve its own names. Google search text
@@ -23,7 +23,7 @@ function providerLocationName(location: string, name?: string) {
 export function mapTflJourney(route: TflRoute, fetchedAt: string, input: JourneyPlannerInput): Journey {
   // The API returns Europe/London timestamps. Preserve London date/time even when the phone uses a different timezone.
   return {
-    id: route.id, source: 'tfl', fetchedAt, mode: route.mode, provider: route.provider,
+    id: route.id, source: route.source, fetchedAt, mode: route.mode, provider: route.provider,
     serviceNumber: route.service_number, origin: route.origin, destination: route.destination,
     departureDate: route.departure_at.slice(0, 10), arrivalDate: route.arrival_at.slice(0, 10),
     departureTime: route.departure_at.slice(11, 16), arrivalTime: route.arrival_at.slice(11, 16),
@@ -37,7 +37,7 @@ export function mapTflJourney(route: TflRoute, fetchedAt: string, input: Journey
       detail: `${leg.origin} → ${leg.destination} · ${leg.duration_minutes} min`,
       time: leg.departure_at.slice(11, 16), completed: false,
     })), { id: `${route.id}-arrival`, title: `Arrive at ${route.destination}`,
-      detail: 'TfL planned arrival. Automatic tracking and stop reminders are not connected.',
+      detail: `${route.source === 'transportapi' ? 'TransportAPI' : 'TfL'} planned arrival. Check Journey Status for timetable reminders.`,
       time: route.arrival_at.slice(11, 16), completed: false }],
   };
 }
@@ -45,8 +45,8 @@ export function mapTflJourney(route: TflRoute, fetchedAt: string, input: Journey
 function isResponse(value: unknown): value is TflResponse {
   if (!value || typeof value !== 'object') return false;
   const response = value as Partial<TflResponse>;
-  return response.source === 'tfl' && typeof response.fetched_at === 'string' && Array.isArray(response.journeys)
-    && response.journeys.every(route => route && route.source === 'tfl' && typeof route.id === 'string'
+  return ['tfl', 'transportapi'].includes(response.source ?? '') && typeof response.fetched_at === 'string' && Array.isArray(response.journeys)
+    && response.journeys.every(route => route && route.source === response.source && typeof route.id === 'string'
       && typeof route.departure_at === 'string' && typeof route.arrival_at === 'string'
       && Array.isArray(route.legs) && Array.isArray(route.accessibility_features) && Array.isArray(route.warnings));
 }
@@ -60,15 +60,17 @@ function locationChoices(value: unknown): LocationChoices | undefined {
 
 export async function planJourneyOptions(input: JourneyPlannerInput): Promise<Journey[]> {
   if (process.env.EXPO_PUBLIC_JOURNEY_PROVIDER === 'demo') return planDemoOptions(input);
-  if (input.mode !== 'bus' && input.mode !== 'train') throw new JourneyPlanningError('TfL planning supports London bus and rail journeys. Flights and car hire need another provider.');
-  if (['current location', 'my location'].includes(input.origin.trim().toLowerCase())) throw new JourneyPlanningError('Enter a London station, stop or postcode in From. Device location is not connected yet.');
+  const provider = process.env.EXPO_PUBLIC_JOURNEY_PROVIDER || 'tfl';
+  if (!['tfl', 'transportapi'].includes(provider)) throw new JourneyPlanningError('EXPO_PUBLIC_JOURNEY_PROVIDER must be tfl, transportapi or demo.');
+  if (input.mode !== 'bus' && input.mode !== 'train') throw new JourneyPlanningError('Journey planning supports bus and rail. Flights and car hire need another provider.');
+  if (!input.origin.trim() || !input.destination.trim() || ['current location', 'my location', 'your current location'].includes(input.origin.trim().toLowerCase())) throw new JourneyPlanningError('Select both locations or tap Use current location to obtain a starting point.');
   const baseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
   if (!baseUrl) throw new JourneyPlanningError('Set EXPO_PUBLIC_API_URL in the app .env to your FastAPI address.');
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 25000);
   try {
     const response = await fetch(`${baseUrl}/api/v1/journeys/plan`, {
       method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, signal: controller.signal,
-      body: JSON.stringify({ origin: input.origin, destination: input.destination,
+      body: JSON.stringify({ ...(provider === 'transportapi' ? { provider } : {}), origin: input.origin, destination: input.destination,
         origin_name: providerLocationName(input.origin, input.originName),
         destination_name: providerLocationName(input.destination, input.destinationName), mode: input.mode,
         departure_date: input.departureDate, departure_time: input.departureTime,
@@ -82,6 +84,7 @@ export async function planJourneyOptions(input: JourneyPlannerInput): Promise<Jo
         error.code === 'LOCATION_AMBIGUOUS' ? locationChoices(error.details) : undefined);
     }
     if (!isResponse(body)) throw new JourneyPlanningError('The journey API returned unexpected data. Check the backend version.');
+    if (body.source !== provider) throw new JourneyPlanningError('The journey API returned a different provider. Check the backend version.');
     return body.journeys.map(route => mapTflJourney(route, body.fetched_at, input));
   } catch (error) {
     if (error instanceof JourneyPlanningError) throw error;

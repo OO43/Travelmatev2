@@ -114,7 +114,7 @@ export function useJourneyPlannerViewModel(initialMode: TransportMode, initialDe
       });
       if (requestVersion.current === version) {
         setRoutes(options); setLocationChoices({ origin: [], destination: [] });
-        if (!options.length) setError('No routes found. Try another London location, time or date.');
+        if (!options.length) setError('No routes found. Check provider coverage or try another location, time or date.');
       }
       return options;
     } catch (error) {
@@ -135,8 +135,8 @@ export function useJourneyPlannerViewModel(initialMode: TransportMode, initialDe
       const sharing = profile.sharingPreference !== 'never' && Boolean(result.useAccessibilityPreferences);
       const journeySession = await createJourneySession({
         passenger_id: profile.passengerId, journey_id: result.id,
-        // A TfL line is not a vehicle. Keep planning sessions separate until a real vehicle is assigned.
-        vehicle_id: result.source === 'tfl'
+        // A planned route is not a physical vehicle. Keep sessions separate until one is assigned.
+        vehicle_id: result.source === 'tfl' || result.source === 'transportapi'
           ? `planned-${result.id}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
           : result.mode + '-' + result.serviceNumber.toLowerCase(),
         declared_ui_options: sharing ? supportOptionsFromProfile(profile) : [],

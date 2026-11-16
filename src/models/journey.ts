@@ -33,7 +33,7 @@ export type JourneyTimelineItem = {
 
 export type Journey = {
   id: string;
-  source?: 'tfl' | 'demo';
+  source?: 'tfl' | 'transportapi' | 'demo';
   fetchedAt?: string;
   warnings?: string[];
   legs?: JourneyLeg[];

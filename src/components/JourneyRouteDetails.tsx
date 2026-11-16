@@ -2,11 +2,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 import { AppText as Text } from '@/components/AppText';
 import type { Journey, JourneyLeg } from '@/models/journey';
-import { isWalkingLeg, journeySummary, journeyWarnings, legServiceLabel, legTimeRange, snapshotLabel, transferMinutes } from '@/services/journeyDisplay';
+import { isWalkingLeg, journeySourceLabel, journeySummary, journeyWarnings, legServiceLabel, legTimeRange, snapshotLabel, transferMinutes } from '@/services/journeyDisplay';
 import { COLORS } from '@/theme';
 
-function legIcon(leg: JourneyLeg): 'walk-outline' | 'bus-outline' | 'train-outline' {
-  return isWalkingLeg(leg) ? 'walk-outline' : leg.mode.includes('bus') ? 'bus-outline' : 'train-outline';
+function legIcon(leg: JourneyLeg): 'walk-outline' | 'bus-outline' | 'train-outline' | 'time-outline' {
+  return leg.mode === 'wait' ? 'time-outline' : isWalkingLeg(leg) ? 'walk-outline' : leg.mode.includes('bus') ? 'bus-outline' : 'train-outline';
 }
 export function JourneyRouteSummary({ journey }: { journey: Journey }) {
   const summary = journeySummary(journey);
@@ -29,7 +29,7 @@ export function JourneyDisruptions({ journey }: { journey: Journey }) {
 export function JourneyRouteDetails({ journey }: { journey: Journey }) {
   const legs = journey.legs ?? [];
   return <View style={styles.details}>
-    <Text style={styles.meta}>{snapshotLabel(journey.fetchedAt)}</Text>
+    <Text style={styles.meta}>{snapshotLabel(journey.fetchedAt, journeySourceLabel(journey))}</Text>
     <Text style={styles.meta}>Planned journey steps. Times below are London local time.</Text>
     {legs.map((leg, index) => {
       const waiting = index ? transferMinutes(legs[index - 1], leg) : 0;
@@ -44,7 +44,7 @@ export function JourneyRouteDetails({ journey }: { journey: Journey }) {
             <Text accessibilityRole="header" style={styles.title}>{legServiceLabel(leg)} · {leg.duration_minutes} min</Text>
             <Text style={styles.time}>{legTimeRange(leg)}</Text>
             <Text style={styles.body}>{walking ? 'From' : boardLabel}: {leg.origin}</Text>
-            <Text style={styles.body}>{walking ? 'Walk to' : 'Alight at'}: {leg.destination}</Text>
+            <Text style={styles.body}>{leg.mode === 'wait' ? 'Continue at' : walking ? 'Walk to' : 'Alight at'}: {leg.destination}</Text>
             {leg.instruction ? <Text style={styles.instruction}>{leg.instruction}</Text> : null}
             {leg.disruptions?.map((notice, noticeIndex) => <Text key={noticeIndex} style={styles.warningText}>Notice: {notice}</Text>)}
           </View>
